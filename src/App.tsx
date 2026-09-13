@@ -86,10 +86,13 @@ export default function App() {
       <p id="top" className="status" role="status">
         {status}{wallet.connected && activeChain && activeChain.key !== selected ? ` · Wallet is on ${activeChain.name}` : ''}
       </p>
-      <section id="play" className="play-layout" aria-label="Play MegaCrypto Lottery">
-        <NetworkInfoPanel chain={chain} ticketPrice={displayToken(snapshot.ticketPrice, chain.contracts.tokenDecimals)} />
-        <div className="play-picker"><NumberPicker value={numbers} onChange={setNumbers} /><button className="review-ticket" disabled={numbers.length !== 15} onClick={reviewTicket}>Continue to transaction review <span>→</span></button></div>
-        <DrawPrizePanel network={chain.name} jackpot={displayToken(snapshot.jackpot, chain.contracts.tokenDecimals)} ticketPrice={displayToken(snapshot.ticketPrice, chain.contracts.tokenDecimals)} numbers={numbers} />
+      <section id="play" className="game-section" aria-label="Play MegaCrypto Lottery">
+        <div className="play-layout">
+          <NetworkInfoPanel chain={chain} ticketPrice={displayToken(snapshot.ticketPrice, chain.contracts.tokenDecimals)} />
+          <div className="play-picker"><NumberPicker value={numbers} onChange={setNumbers} /></div>
+          <DrawPrizePanel network={chain.name} jackpot={displayToken(snapshot.jackpot, chain.contracts.tokenDecimals)} ticketPrice={displayToken(snapshot.ticketPrice, chain.contracts.tokenDecimals)} numbers={numbers} />
+        </div>
+        <button className="review-ticket" disabled={numbers.length !== 15} onClick={reviewTicket}>Continue to transaction review <span>→</span></button>
       </section>
       <NetworkGrid selected={selected} onSelect={setSelected} />
       <section className="cards" aria-label="Lottery records">
