@@ -3,15 +3,13 @@ import type { ChainConfig } from '../types';
 export function NetworkInfoPanel({ chain, ticketPrice }: { chain: ChainConfig; ticketPrice: string }) {
   return (
     <aside className="panel play-info" aria-label="Selected network information">
-      <p className="eyebrow">PLAY DETAILS</p>
-      <h2>Verified on-chain ticket</h2>
+      <div className="ticket-price-head"><span aria-hidden="true">◆</span><div><p className="eyebrow">TICKET PRICE</p><h2>{ticketPrice} USDT</h2></div></div>
       <dl className="detail-list">
-        <dt>Ticket price</dt><dd>{ticketPrice} USDT</dd>
-        <dt>Selected network</dt><dd>{chain.name}</dd>
-        <dt>Lottery contract</dt><dd className="mono">{chain.contracts.lottery ?? 'Verification Required'}</dd>
-        <dt>USDT contract</dt><dd className="mono">{chain.contracts.token ?? 'Verification Required'}</dd>
-        <dt>Network status</dt><dd className="verified">{chain.contracts.status === 'verified' ? 'Verified' : 'Verification Required'}</dd>
+        <dt>Select network</dt><dd className="network-readout"><span aria-hidden="true">●</span>{chain.name}</dd>
+        <dt>Lottery contract</dt><dd className="mono contract-readout">{chain.contracts.lottery ?? 'Verification Required'}<span aria-hidden="true">⧉</span></dd>
+        <dt>USDT contract</dt><dd className="mono contract-readout">{chain.contracts.token ?? 'Verification Required'}<span aria-hidden="true">⧉</span></dd>
       </dl>
+      <div className="verified-card"><span aria-hidden="true">✓</span><div><b>{chain.contracts.status === 'verified' ? 'Network Verified' : 'Verification Required'}</b><small>Contract and USDT verified</small></div></div>
       <a className="explorer-link" href={chain.explorer} target="_blank" rel="noreferrer">Open explorer ↗</a>
     </aside>
   );

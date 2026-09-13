@@ -66,7 +66,7 @@ export default function App() {
   return (
     <main>
       <nav>
-        <a className="brand" href="#top">MEGA<span>CRYPTO</span><b>LOTTERY</b><i>V2</i></a>
+        <a className="brand" href="#top"><span className="brand-crown" aria-hidden="true">♛</span><span>MEGA<em>CRYPTO</em><b>LOTTERY</b></span><i>V2</i></a>
         <div className="nav-links" aria-label="Primary navigation">
           <a href="#play">Play</a><a href="#fairness">How It Works</a><a href="#draws">Draws</a><a href="#winners">Winners</a><a href="#tickets">My Tickets</a><a href="#stats">Stats</a><a href="#faq">FAQ</a>
         </div>
@@ -83,8 +83,7 @@ export default function App() {
       <GlobalPrizeDashboard />
       <div id="stats"><GlobalStats /></div>
 
-      <header id="top" className="play-intro"><p className="eyebrow">DECENTRALIZED • TRANSPARENT • MULTI-CHAIN</p><h1>Choose with confidence.<br /><em>Play with proof.</em></h1><p>Every on-chain value is read live. Review every transaction in your wallet before it is sent.</p></header>
-      <p className="status" role="status">
+      <p id="top" className="status" role="status">
         {status}{wallet.connected && activeChain && activeChain.key !== selected ? ` · Wallet is on ${activeChain.name}` : ''}
       </p>
       <section id="play" className="play-layout" aria-label="Play MegaCrypto Lottery">

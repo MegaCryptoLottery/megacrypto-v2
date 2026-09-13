@@ -13,10 +13,8 @@ export function GlobalPrizeDashboard() {
 
   return (
     <section className="global-prizes panel" aria-labelledby="global-prize-title">
-      <div className="global-prize-heading">
-        <div><p className="eyebrow">LIVE MULTI-CHAIN PRIZES</p><h2 id="global-prize-title">One lottery. Six verified networks.</h2></div>
-        <button className="secondary refresh" onClick={refresh} disabled={loading}>{loading ? 'Refreshing…' : 'Refresh live values'}</button>
-      </div>
+      <div className="planet" aria-hidden="true"><i /><b /></div>
+      <h2 id="global-prize-title" className="sr-only">Live multi-chain prizes</h2><div className="global-prize-controls"><button className="secondary refresh" onClick={refresh} disabled={loading}>{loading ? 'Refreshing…' : '↻ Refresh'}</button></div>
       <div className="global-prize-grid">
         <div className="global-total jackpot-total"><span>Global jackpot</span><small>All networks combined</small><strong>{data ? `$${display(data.jackpot)}` : 'Loading…'} <em>USDT</em></strong><i className="live-reading">{data ? 'Live read-only data' : 'Reading networks…'}</i></div>
         <div className="weekly-total"><TrophyMark /><span>This week’s prizes</span><small>All networks</small><strong>{data ? `$${display(data.weekly)}` : 'Loading…'} <em>USDT</em></strong></div>
