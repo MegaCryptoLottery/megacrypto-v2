@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { CHAINS, chainById } from './config/chains';
 import type { ChainKey, LotterySnapshot, WalletState } from './types';
-import { NetworkGrid } from './components/NetworkGrid'; import { TransactionReview } from './components/TransactionReview'; import { Fairness } from './components/Fairness'; import { NumberPicker, normalizeTicketNumbers } from './components/NumberPicker';
+import { NetworkGrid } from './components/NetworkGrid'; import { TransactionReview } from './components/TransactionReview'; import { Fairness } from './components/Fairness'; import { NumberPicker, normalizeTicketNumbers } from './components/NumberPicker'; import { GlobalPrizeDashboard } from './components/GlobalPrizeDashboard';
 import { displayToken, readLottery } from './web3/lottery'; import { WalletController } from './web3/wallet'; import { friendlyError, prepareTicketPurchase, submitReviewed, type TransactionReview as Review } from './web3/transactions';
 export default function App() {
   const [selected,setSelected]=useState<ChainKey>('polygon'); const [wallet,setWallet]=useState<WalletState>({connected:false,connecting:false}); const [snapshot,setSnapshot]=useState<LotterySnapshot>({}); const [numbers,setNumbers]=useState<number[]>([]); const [status,setStatus]=useState('Select a verified network to view live on-chain data.'); const [review,setReview]=useState<Review>(); const [busy,setBusy]=useState(false);
