@@ -8,6 +8,7 @@ import { NetworkGrid } from './components/NetworkGrid';
 import { NetworkInfoPanel } from './components/NetworkInfoPanel';
 import { NumberPicker, normalizeTicketNumbers } from './components/NumberPicker';
 import { TransactionReview } from './components/TransactionReview';
+import { TrustBar } from './components/TrustBar';
 import type { ChainKey, LotterySnapshot, WalletState } from './types';
 import { displayToken, readLottery } from './web3/lottery';
 import { friendlyError, prepareTicketPurchase, submitReviewed, type TransactionReview as Review } from './web3/transactions';
@@ -65,7 +66,7 @@ export default function App() {
   return (
     <main>
       <nav>
-        <a className="brand" href="#top">MEGA<span>CRYPTO</span><i>V2</i></a>
+        <a className="brand" href="#top">MEGA<span>CRYPTO</span><b>LOTTERY</b><i>V2</i></a>
         <div className="nav-links" aria-label="Primary navigation">
           <a href="#play">Play</a><a href="#fairness">How It Works</a><a href="#draws">Draws</a><a href="#winners">Winners</a><a href="#tickets">My Tickets</a><a href="#stats">Stats</a><a href="#faq">FAQ</a>
         </div>
@@ -89,7 +90,7 @@ export default function App() {
       <section id="play" className="play-layout" aria-label="Play MegaCrypto Lottery">
         <NetworkInfoPanel chain={chain} ticketPrice={displayToken(snapshot.ticketPrice, chain.contracts.tokenDecimals)} />
         <div className="play-picker"><NumberPicker value={numbers} onChange={setNumbers} /><button className="review-ticket" disabled={numbers.length !== 15} onClick={reviewTicket}>Continue to transaction review <span>→</span></button></div>
-        <DrawPrizePanel network={chain.name} jackpot={displayToken(snapshot.jackpot, chain.contracts.tokenDecimals)} ticketPrice={displayToken(snapshot.ticketPrice, chain.contracts.tokenDecimals)} />
+        <DrawPrizePanel network={chain.name} jackpot={displayToken(snapshot.jackpot, chain.contracts.tokenDecimals)} ticketPrice={displayToken(snapshot.ticketPrice, chain.contracts.tokenDecimals)} numbers={numbers} />
       </section>
       <NetworkGrid selected={selected} onSelect={setSelected} />
       <section className="cards" aria-label="Lottery records">
@@ -98,6 +99,7 @@ export default function App() {
       </section>
       <div id="winners" className="sr-only">Winner records are unavailable until verified event-backed history is displayed.</div>
       <div id="fairness"><Fairness /></div>
+      <TrustBar />
       <footer>© 2026 MegaCrypto Lottery · This app never asks for a recovery phrase or private key.</footer>
       {review && <TransactionReview review={review} onCancel={() => setReview(undefined)} onConfirm={confirm} busy={busy} />}
     </main>

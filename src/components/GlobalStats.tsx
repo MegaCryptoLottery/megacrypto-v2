@@ -1,4 +1,4 @@
-const pending = 'Unavailable — on-chain source pending';
+const pending = '—  Data pending';
 
 export function GlobalStats() {
   return (
@@ -6,7 +6,7 @@ export function GlobalStats() {
       <div><span>Players</span><strong>{pending}</strong></div>
       <div><span>Tickets</span><strong>{pending}</strong></div>
       <div><span>Winners</span><strong>{pending}</strong></div>
-      <div><span>Total prizes</span><strong>Shown in the live global dashboard</strong></div>
+      <div><span>Total prizes</span><strong>Live above</strong></div>
       <div className="vrf-stat"><span>Chainlink VRF</span><strong>Provably fair</strong></div>
     </section>
   );
