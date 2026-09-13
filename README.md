@@ -35,9 +35,9 @@ The original repository contains only `README.md` and `index.html`. V2 imported 
 | Arbitrum One | 42161 | `0x162F0B0E205719a25542142b65967D5e686068ee` | `0xfd086bc7cd5c481dcc9c85ebe478a1c0b69fcbb9` | Enabled |
 | Base | 8453 | `0x0fBF3A5fFE730D95611f08B6Bb315c6161c36eeB` | `0xfde4C96c8593536E31F229EA8f37b2ADa2699bb2` | Enabled |
 | Optimism | 10 | `0x73B543CC94a03cb7e9DE38eb4EcAAA883b4804b0` | `0x94b008aA00579c1307B0EF2c499aD98a8ce58e58` | Enabled |
-| Avalanche | 43114 | `0x0fBF3A5fFE730D95611f08B6Bb315c6161c36eeB` | `0x9702230A8Ea53601f5cD2dc00fDBc13d4dF4A8c7` | **Verification Required** |
+| Avalanche | 43114 | `0x0fBF3A5fFE730D95611f08B6Bb315c6161c36eeB` | `0x9702230A8Ea53601f5cD2dc00fDBc13d4dF4A8c7` | Enabled after on-chain verification |
 
-Avalanche is disabled because the original configuration reuses Base’s lottery address. The original ABI specifies `comprarBilhete(uint8[])`, dynamic `precoBilhete`, jackpot/pool/prize reads, and `SorteioRealizado(requestId, maskSorteada)` / `BilheteComprado(jogador, quantidadeApostas)`, plus ERC-20 approval/allowance/balance functions. It mentions Chainlink VRF but includes no coordinator, subscription, key-hash, or callback configuration; V2 does not invent those values.
+Avalanche and Base reuse the same configured address but were independently verified on-chain; their runtime bytecode hashes differ while the tested lottery read behavior is compatible. See [`docs/onchain-verification.md`](docs/onchain-verification.md). The original ABI specifies `comprarBilhete(uint8[])`, dynamic `precoBilhete`, jackpot/pool/prize reads, and `SorteioRealizado(requestId, maskSorteada)` / `BilheteComprado(jogador, quantidadeApostas)`, plus ERC-20 approval/allowance/balance functions. It mentions Chainlink VRF but includes no coordinator, subscription, key-hash, or callback configuration; V2 does not invent those values.
 
 ## Deployment verification gate
 
@@ -60,3 +60,4 @@ Add a typed `ChainConfig` record to `CHAINS` with its exact chain ID, explorer, 
 - Users review network, contract, payment, and estimated gas before their wallet is invoked.
 - Event records must be associated through indexed `roundId` and VRF `requestId`; array position is not a source of truth.
 - Final wallet confirmation is authoritative. The UI never simulates success.
+
