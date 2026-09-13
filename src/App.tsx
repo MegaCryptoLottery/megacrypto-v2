@@ -1,8 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import { CHAINS, chainById } from './config/chains';
 import { Fairness } from './components/Fairness';
+import { DrawPrizePanel } from './components/DrawPrizePanel';
 import { GlobalPrizeDashboard } from './components/GlobalPrizeDashboard';
+import { GlobalStats } from './components/GlobalStats';
 import { NetworkGrid } from './components/NetworkGrid';
+import { NetworkInfoPanel } from './components/NetworkInfoPanel';
 import { NumberPicker, normalizeTicketNumbers } from './components/NumberPicker';
 import { TransactionReview } from './components/TransactionReview';
 import type { ChainKey, LotterySnapshot, WalletState } from './types';
@@ -63,7 +66,11 @@ export default function App() {
     <main>
       <nav>
         <a className="brand" href="#top">MEGA<span>CRYPTO</span><i>V2</i></a>
+        <div className="nav-links" aria-label="Primary navigation">
+          <a href="#play">Play</a><a href="#fairness">How It Works</a><a href="#draws">Draws</a><a href="#winners">Winners</a><a href="#tickets">My Tickets</a><a href="#stats">Stats</a><a href="#faq">FAQ</a>
+        </div>
         <div className="nav-status">
+          <label className="network-select"><span className="sr-only">Selected network</span><select value={selected} onChange={(event) => setSelected(event.target.value as ChainKey)}>{Object.values(CHAINS).map((item) => <option key={item.key} value={item.key}>{item.name}</option>)}</select></label>
           <span className={wallet.connected ? 'dot live' : 'dot'} />
           {wallet.connected ? `${wallet.address!.slice(0, 6)}…${wallet.address!.slice(-4)}` : 'Not connected'}
           <button onClick={connect} disabled={wallet.connecting}>
@@ -73,38 +80,27 @@ export default function App() {
       </nav>
 
       <GlobalPrizeDashboard />
+      <div id="stats"><GlobalStats /></div>
 
-      <header id="top" className="hero">
-        <div>
-          <p className="eyebrow">DECENTRALIZED • TRANSPARENT • MULTI-CHAIN</p>
-          <h1>Luck, with<br /><em>proof.</em></h1>
-          <p className="lede">Select your numbers, verify every detail, and decide in your own wallet.</p>
-          <div className="hero-actions">
-            <button disabled={numbers.length !== 15} onClick={reviewTicket}>Review ticket <span>→</span></button>
-            <a href="#fairness">How fairness works</a>
-          </div>
-        </div>
-        <aside className="jackpot">
-          <p>Current jackpot</p>
-          <strong>{displayToken(snapshot.jackpot, chain.contracts.tokenDecimals)}</strong>
-          <span>{chain.contracts.tokenSymbol} {snapshot.jackpot === undefined ? '• unavailable' : '• live'}</span>
-          <hr />
-          <div><small>Selection</small><b>{numbers.length} / 15</b></div>
-          <div><small>Ticket price</small><b>{displayToken(snapshot.ticketPrice, chain.contracts.tokenDecimals)} USDT</b></div>
-        </aside>
-      </header>
+      <header id="top" className="play-intro"><p className="eyebrow">DECENTRALIZED • TRANSPARENT • MULTI-CHAIN</p><h1>Choose with confidence.<br /><em>Play with proof.</em></h1><p>Every on-chain value is read live. Review every transaction in your wallet before it is sent.</p></header>
       <p className="status" role="status">
         {status}{wallet.connected && activeChain && activeChain.key !== selected ? ` · Wallet is on ${activeChain.name}` : ''}
       </p>
-      <NumberPicker value={numbers} onChange={setNumbers} />
-      <NetworkGrid selected={selected} onSelect={setSelected} />
-      <section className="cards">
-        <article className="panel"><p className="eyebrow">YOUR POSITION</p><h2>Tickets & rewards</h2><p className="empty">Connect a wallet to read your verified ticket and reward state.</p></article>
-        <article className="panel"><p className="eyebrow">DRAW HISTORY</p><h2>Public, not simulated</h2><p className="empty">Historic rounds are only shown from bounded on-chain event queries.</p></article>
+      <section id="play" className="play-layout" aria-label="Play MegaCrypto Lottery">
+        <NetworkInfoPanel chain={chain} ticketPrice={displayToken(snapshot.ticketPrice, chain.contracts.tokenDecimals)} />
+        <div className="play-picker"><NumberPicker value={numbers} onChange={setNumbers} /><button className="review-ticket" disabled={numbers.length !== 15} onClick={reviewTicket}>Continue to transaction review <span>→</span></button></div>
+        <DrawPrizePanel network={chain.name} jackpot={displayToken(snapshot.jackpot, chain.contracts.tokenDecimals)} ticketPrice={displayToken(snapshot.ticketPrice, chain.contracts.tokenDecimals)} />
       </section>
+      <NetworkGrid selected={selected} onSelect={setSelected} />
+      <section className="cards" aria-label="Lottery records">
+        <article id="tickets" className="panel"><p className="eyebrow">YOUR POSITION</p><h2>Tickets & rewards</h2><p className="empty">Connect a wallet to read your verified ticket and reward state.</p></article>
+        <article id="draws" className="panel"><p className="eyebrow">DRAW HISTORY</p><h2>Public, not simulated</h2><p className="empty">Historic rounds are only shown from bounded on-chain event queries.</p></article>
+      </section>
+      <div id="winners" className="sr-only">Winner records are unavailable until verified event-backed history is displayed.</div>
       <div id="fairness"><Fairness /></div>
       <footer>© 2026 MegaCrypto Lottery · This app never asks for a recovery phrase or private key.</footer>
       {review && <TransactionReview review={review} onCancel={() => setReview(undefined)} onConfirm={confirm} busy={busy} />}
     </main>
   );
 }
+
