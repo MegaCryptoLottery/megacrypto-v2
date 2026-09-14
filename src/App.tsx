@@ -64,8 +64,9 @@ export default function App() {
 
   const activeChain = chainById(wallet.chainId);
   return (
-    <main>
-      <nav>
+    <div className="app-shell">
+      <header className="section-shell app-header">
+      <nav className="content-container">
         <a className="brand" href="#top"><span className="brand-crown" aria-hidden="true">♛</span><span>MEGA<em>CRYPTO</em><b>LOTTERY</b></span><i>V2</i></a>
         <div className="nav-links" aria-label="Primary navigation">
           <a href="#play">Play</a><a href="#fairness">How It Works</a><a href="#draws">Draws</a><a href="#winners">Winners</a><a href="#tickets">My Tickets</a><a href="#stats">Stats</a><a href="#faq">FAQ</a>
@@ -79,7 +80,9 @@ export default function App() {
           </button>
         </div>
       </nav>
+      </header>
 
+      <div role="main" className="content-container">
       <GlobalPrizeDashboard />
       <div id="stats"><GlobalStats /></div>
 
@@ -102,9 +105,9 @@ export default function App() {
       <div id="winners" className="sr-only">Winner records are unavailable until verified event-backed history is displayed.</div>
       <div id="fairness"><Fairness /></div>
       <TrustBar />
-      <footer>© 2026 MegaCrypto Lottery · This app never asks for a recovery phrase or private key.</footer>
+      </div>
+      <footer className="section-shell app-footer"><div className="content-container">© 2026 MegaCrypto Lottery · This app never asks for a recovery phrase or private key.</div></footer>
       {review && <TransactionReview review={review} onCancel={() => setReview(undefined)} onConfirm={confirm} busy={busy} />}
-    </main>
+    </div>
   );
 }
-
