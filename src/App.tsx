@@ -66,7 +66,7 @@ export default function App() {
   const connect = async () => {
     try {
       ensureAppKitModal();
-      await openAppKit({ view: 'Connect' });
+      await openAppKit({ view: wallet.connected ? 'Account' : 'Connect' });
       if (!document.querySelector('w3m-modal')) throw new Error('The Reown wallet interface could not be displayed.');
     } catch (error) {
       const message = friendlyError(error);
@@ -95,7 +95,7 @@ export default function App() {
     if (!review || !controller.getProvider()) return;
     try {
       setBusy(true);
-      const receipt = await submitReviewed(controller.getProvider()!, review.request);
+      const receipt = await submitReviewed(controller.getProvider()!, review);
       setStatus(review.kind === 'approval'
         ? `USDT approval confirmed in block ${receipt?.blockNumber ?? 'pending'}. Review the ticket transaction next.`
         : `Ticket confirmed in block ${receipt?.blockNumber ?? 'pending'}.`);
@@ -117,7 +117,7 @@ export default function App() {
           <span className={wallet.connected ? 'dot live' : 'dot'} />
           {wallet.connected ? `${wallet.address!.slice(0, 6)}…${wallet.address!.slice(-4)}` : 'Not connected'}
           <button onClick={connect} disabled={wallet.connecting}>
-            {wallet.connecting ? 'Connecting…' : wallet.connected ? 'Wallet connected' : 'Connect wallet'}
+            {wallet.connecting ? 'Connecting…' : wallet.connected ? 'Manage Wallet' : 'Connect wallet'}
           </button>
         </div>
         <button className="mobile-menu-toggle" type="button" aria-label={mobileMenuOpen ? 'Close navigation menu' : 'Open navigation menu'} aria-expanded={mobileMenuOpen} aria-controls="mobile-navigation" onClick={() => setMobileMenuOpen((open) => !open)}><span /><span /><span /></button>
@@ -160,4 +160,3 @@ export default function App() {
     </div>
   );
 }
-
