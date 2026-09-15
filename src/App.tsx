@@ -1,3 +1,5 @@
+import { useAppKitAccount, useAppKitNetwork, useAppKitProvider } from '@reown/appkit/react';
+import { type Eip1193Provider } from 'ethers';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { CHAINS, chainById } from './config/chains';
 import { Fairness } from './components/Fairness';
@@ -12,6 +14,7 @@ import { TrustBar } from './components/TrustBar';
 import type { ChainKey, LotterySnapshot, WalletState } from './types';
 import { displayToken, readLottery } from './web3/lottery';
 import { friendlyError, prepareTicketPurchase, submitReviewed, type TransactionReview as Review } from './web3/transactions';
+import { appKit, appKitNetworkByChainId } from './web3/appkit';
 import { WalletController } from './web3/wallet';
 
 const navigationItems = [
@@ -29,9 +32,20 @@ export default function App() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const firstMobileLink = useRef<HTMLAnchorElement>(null);
   const controller = useMemo(() => new WalletController(setWallet), []);
+  const { address, isConnected, status: connectionStatus } = useAppKitAccount();
+  const { chainId, switchNetwork } = useAppKitNetwork();
+  const { walletProvider } = useAppKitProvider<Eip1193Provider>('eip155');
   const chain = CHAINS[selected];
 
-  useEffect(() => { controller.reconnect().catch(() => undefined); }, [controller]);
+  useEffect(() => {
+    controller.syncAppKit({
+      address,
+      chainId: typeof chainId === 'number' ? chainId : Number(chainId),
+      connected: isConnected,
+      connecting: connectionStatus === 'connecting' || connectionStatus === 'reconnecting',
+      provider: walletProvider,
+    });
+  }, [address, chainId, connectionStatus, controller, isConnected, walletProvider]);
   useEffect(() => {
     if (!mobileMenuOpen) return;
     const previousOverflow = document.body.style.overflow;
@@ -49,7 +63,7 @@ export default function App() {
   }, [chain]);
 
   const connect = async () => {
-    try { await controller.connect(); }
+    try { await appKit.open(); }
     catch (error) { setWallet({ connected: false, connecting: false, error: friendlyError(error) }); }
   };
 
@@ -58,7 +72,13 @@ export default function App() {
       const ticket = normalizeTicketNumbers(numbers);
       if (chain.contracts.status !== 'verified') return void setStatus(chain.contracts.note ?? 'Verification Required.');
       if (!wallet.connected) return void setStatus('Connect a wallet before reviewing a ticket.');
-      if (wallet.chainId !== chain.chainId) return void setStatus(`Switch your wallet to ${chain.name}.`);
+      if (wallet.chainId !== chain.chainId) {
+        const targetNetwork = appKitNetworkByChainId.get(chain.chainId);
+        if (!targetNetwork) return void setStatus(`${chain.name} is unavailable for wallet switching.`);
+        setStatus(`Switch your wallet to ${chain.name} before reviewing a ticket.`);
+        await switchNetwork(targetNetwork);
+        return;
+      }
       setReview(await prepareTicketPurchase(chain, controller.getProvider(), ticket));
     } catch (error) { setStatus(friendlyError(error)); }
   };
@@ -132,3 +152,4 @@ export default function App() {
     </div>
   );
 }
+
