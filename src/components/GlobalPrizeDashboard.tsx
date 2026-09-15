@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
-import { formatUnits } from 'ethers';
 import { readGlobalPrizes, type NetworkPrizeState } from '../web3/dashboard';
+import { formatNormalizedUsdt } from '../web3/amounts';
 import { TrophyMark } from './TrophyMark';
 import { NetworkIcon } from './NetworkIcon';
 
-const display = (value?: bigint) => value === undefined ? '—' : Number(formatUnits(value, 6)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const display = (value?: bigint) => formatNormalizedUsdt(value, 2, 2);
 
 export function GlobalPrizeDashboard() {
   const [data, setData] = useState<{ jackpot: bigint; weekly: bigint; available: number; networks: NetworkPrizeState[] }>();
@@ -31,7 +31,7 @@ export function GlobalPrizeDashboard() {
       </div>
       <i className="live-reading">{data ? 'Live read-only data' : 'Reading networks…'}</i>
       <p className={data?.available === 6 ? 'availability ok' : 'availability'}>{data ? `${data.available} of 6 networks available${data.available === 6 ? '' : ' · Aggregate is partial'}` : 'Reading each network independently…'}</p>
-      {data && <details><summary>View per-network live breakdown</summary><div className="prize-table"><b>Network</b><b>Jackpot</b><b>Weekly pool</b><b>Status</b>{data.networks.map((item) => <div className="prize-row" key={item.chain.key}><span>{item.chain.name}</span><span>{display(item.jackpot)}</span><span>{display(item.weekly)}</span><span className={item.error ? 'down' : 'up'}>{item.error ? 'Unavailable' : 'Live'}</span></div>)}</div></details>}
+      {data && <details><summary>View per-network live breakdown</summary><div className="prize-table"><b>Network</b><b>Jackpot</b><b>Weekly pool</b><b>Status</b>{data.networks.map((item) => <div className="prize-row" key={item.chain.key}><span>{item.chain.name}</span><span>{display(item.jackpotUsdt)}</span><span>{display(item.weeklyUsdt)}</span><span className={item.error ? 'down' : 'up'}>{item.error ? 'Unavailable' : 'Live'}</span></div>)}</div></details>}
     </section>
   );
 }
