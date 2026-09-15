@@ -1,4 +1,4 @@
-import { useAppKitAccount, useAppKitNetwork, useAppKitProvider } from '@reown/appkit/react';
+import { useAppKit, useAppKitAccount, useAppKitNetwork, useAppKitProvider } from '@reown/appkit/react';
 import { type Eip1193Provider } from 'ethers';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { CHAINS, chainById } from './config/chains';
@@ -14,7 +14,7 @@ import { TrustBar } from './components/TrustBar';
 import type { ChainKey, LotterySnapshot, WalletState } from './types';
 import { displayToken, readLottery } from './web3/lottery';
 import { friendlyError, prepareTicketPurchase, submitReviewed, type TransactionReview as Review } from './web3/transactions';
-import { appKit, appKitNetworkByChainId } from './web3/appkit';
+import { appKitNetworkByChainId, ensureAppKitModal } from './web3/appkit';
 import { WalletController } from './web3/wallet';
 
 const navigationItems = [
@@ -33,6 +33,7 @@ export default function App() {
   const firstMobileLink = useRef<HTMLAnchorElement>(null);
   const controller = useMemo(() => new WalletController(setWallet), []);
   const { address, isConnected, status: connectionStatus } = useAppKitAccount();
+  const { open: openAppKit } = useAppKit();
   const { chainId, switchNetwork } = useAppKitNetwork();
   const { walletProvider } = useAppKitProvider<Eip1193Provider>('eip155');
   const chain = CHAINS[selected];
@@ -63,8 +64,15 @@ export default function App() {
   }, [chain]);
 
   const connect = async () => {
-    try { await appKit.open(); }
-    catch (error) { setWallet({ connected: false, connecting: false, error: friendlyError(error) }); }
+    try {
+      ensureAppKitModal();
+      await openAppKit({ view: 'Connect' });
+      if (!document.querySelector('w3m-modal')) throw new Error('The Reown wallet interface could not be displayed.');
+    } catch (error) {
+      const message = friendlyError(error);
+      setWallet({ connected: false, connecting: false, error: message });
+      setStatus(`Wallet connection unavailable: ${message}`);
+    }
   };
 
   const reviewTicket = async () => {

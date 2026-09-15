@@ -1,5 +1,9 @@
 import { createAppKit, type CaipNetwork } from '@reown/appkit/react';
 import { EthersAdapter } from '@reown/appkit-adapter-ethers';
+// AppKit normally loads these on first open. Registering them with the app
+// bundle prevents a failed lazy chunk from becoming an invisible no-op.
+import '@reown/appkit-scaffold-ui';
+import '@reown/appkit-scaffold-ui/w3m-modal';
 import { CHAINS } from '../config/chains';
 import type { ChainConfig } from '../types';
 
@@ -35,4 +39,14 @@ export const appKit = createAppKit({
   features: { analytics: false, email: false, socials: false },
   themeMode: 'dark',
 });
+
+export const ensureAppKitModal = () => {
+  if (typeof document === 'undefined') return;
+  if (!customElements.get('w3m-modal')) {
+    throw new Error('The Reown wallet interface did not load. Please refresh and try again.');
+  }
+  if (!document.querySelector('w3m-modal')) {
+    document.body.append(document.createElement('w3m-modal'));
+  }
+};
 
