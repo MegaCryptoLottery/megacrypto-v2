@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { CHAINS, chainById } from './config/chains';
 import { Fairness } from './components/Fairness';
 import { DrawPrizePanel } from './components/DrawPrizePanel';
@@ -14,6 +14,10 @@ import { displayToken, readLottery } from './web3/lottery';
 import { friendlyError, prepareTicketPurchase, submitReviewed, type TransactionReview as Review } from './web3/transactions';
 import { WalletController } from './web3/wallet';
 
+const navigationItems = [
+  ['#play', 'Play'], ['#fairness', 'How It Works'], ['#draws', 'Draws'], ['#winners', 'Winners'], ['#tickets', 'My Tickets'], ['#stats', 'Stats'], ['#faq', 'FAQ'],
+] as const;
+
 export default function App() {
   const [selected, setSelected] = useState<ChainKey>('polygon');
   const [wallet, setWallet] = useState<WalletState>({ connected: false, connecting: false });
@@ -22,10 +26,21 @@ export default function App() {
   const [status, setStatus] = useState('Select a verified network to view live on-chain data.');
   const [review, setReview] = useState<Review>();
   const [busy, setBusy] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const firstMobileLink = useRef<HTMLAnchorElement>(null);
   const controller = useMemo(() => new WalletController(setWallet), []);
   const chain = CHAINS[selected];
 
   useEffect(() => { controller.reconnect().catch(() => undefined); }, [controller]);
+  useEffect(() => {
+    if (!mobileMenuOpen) return;
+    const previousOverflow = document.body.style.overflow;
+    const onKeyDown = (event: KeyboardEvent) => { if (event.key === 'Escape') setMobileMenuOpen(false); };
+    document.body.style.overflow = 'hidden';
+    document.addEventListener('keydown', onKeyDown);
+    window.setTimeout(() => firstMobileLink.current?.focus(), 0);
+    return () => { document.body.style.overflow = previousOverflow; document.removeEventListener('keydown', onKeyDown); };
+  }, [mobileMenuOpen]);
   useEffect(() => {
     setSnapshot({});
     readLottery(chain)
@@ -68,9 +83,7 @@ export default function App() {
       <header className="section-shell app-header">
       <nav className="content-container">
         <a className="brand" href="#top"><img className="brand-crown" src={`${import.meta.env.BASE_URL}assets/brand/megacrypto-crown.webp`} alt="" aria-hidden="true" style={{ width: 'clamp(42px, 4vw, 58px)', height: 'clamp(42px, 4vw, 58px)', objectFit: 'contain' }} /><span>MEGA<em>CRYPTO</em><b>LOTTERY</b></span><i>V2</i></a>
-        <div className="nav-links" aria-label="Primary navigation">
-          <a href="#play">Play</a><a href="#fairness">How It Works</a><a href="#draws">Draws</a><a href="#winners">Winners</a><a href="#tickets">My Tickets</a><a href="#stats">Stats</a><a href="#faq">FAQ</a>
-        </div>
+        <div className="nav-links" aria-label="Primary navigation">{navigationItems.map(([href, label]) => <a key={href} href={href}>{label}</a>)}</div>
         <div className="nav-status">
           <label className="network-select"><span className="sr-only">Selected network</span><select value={selected} onChange={(event) => setSelected(event.target.value as ChainKey)}>{Object.values(CHAINS).map((item) => <option key={item.key} value={item.key}>{item.name}</option>)}</select></label>
           <span className={wallet.connected ? 'dot live' : 'dot'} />
@@ -79,8 +92,16 @@ export default function App() {
             {wallet.connecting ? 'Connecting…' : wallet.connected ? 'Wallet connected' : 'Connect wallet'}
           </button>
         </div>
+        <button className="mobile-menu-toggle" type="button" aria-label={mobileMenuOpen ? 'Close navigation menu' : 'Open navigation menu'} aria-expanded={mobileMenuOpen} aria-controls="mobile-navigation" onClick={() => setMobileMenuOpen((open) => !open)}><span /><span /><span /></button>
       </nav>
       </header>
+      {mobileMenuOpen && <div className="mobile-nav-layer">
+        <button className="mobile-nav-backdrop" type="button" aria-label="Close navigation menu" onClick={() => setMobileMenuOpen(false)} />
+        <nav id="mobile-navigation" className="mobile-nav-drawer" aria-label="Mobile navigation">
+          <p>Explore MegaCrypto Lottery</p>
+          {navigationItems.map(([href, label], index) => <a key={href} ref={index === 0 ? firstMobileLink : undefined} href={href} onClick={() => setMobileMenuOpen(false)}>{label}<span aria-hidden="true">→</span></a>)}
+        </nav>
+      </div>}
 
       <div role="main" className="content-container">
       <GlobalPrizeDashboard />
