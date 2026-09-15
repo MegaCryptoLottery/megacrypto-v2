@@ -12,6 +12,10 @@
   "dependencies": {
     "@reown/appkit": "^1.8.23",
     "@reown/appkit-adapter-ethers": "^1.8.23",
+    "@reown/appkit-common": "1.8.23",
+    "@reown/appkit-controllers": "1.8.23",
+    "@reown/appkit-scaffold-ui": "1.8.23",
+    "@reown/appkit-utils": "1.8.23",
     "ethers": "^6.13.4",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
@@ -25,4 +29,3 @@
     "vitest": "^2.1.4"
   }
 }
-
