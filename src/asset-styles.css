@@ -35,3 +35,9 @@
 }
 
 @keyframes mobile-nav-in { from { opacity: 0; transform: translateY(-10px) scale(.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
+
+/* Transaction review: placed after legacy modal rules so its compact viewport contract is authoritative. */
+.modal-backdrop { position: fixed; inset: 0; z-index: 10; display: grid; place-items: center; padding: 20px; background: #03050db8; }
+.modal { display: flex; flex-direction: column; width: min(720px, 100%); max-height: min(88vh, 820px); padding: 0; overflow: hidden; background: linear-gradient(145deg, #0d1b31fa, #080c20fc); box-shadow: 0 30px 80px #000c, 0 0 55px #7043d33d; }
+.modal .notice { margin: 16px 0 0; padding: 12px; color: #cad1e2; background: #ffffff09; border: 1px solid #ffffff12; border-radius: 10px; font-size: 12px; line-height: 1.6; }
+@media (max-width: 767px) { .modal-backdrop { align-items: end; padding: 12px; } .modal { width: 100%; max-height: calc(100vh - 24px); max-height: calc(100dvh - 24px); padding: 0; border-radius: 17px; } }

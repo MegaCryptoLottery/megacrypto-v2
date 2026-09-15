@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
+import { Interface } from 'ethers';
 import { CHAINS } from '../config/chains';
+import { LOTTERY_ABI } from '../contracts/lotteryAbi';
 import { InsufficientUsdtBalanceError, assertPreparationNetwork, decidePurchaseAction, formatTokenAmount, friendlyError, validateTicketNumbers } from './transactions';
 
 const validTicket = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
@@ -37,5 +39,12 @@ describe('ticket preparation guards', () => {
 
   it('requires the connected chain to match the selected deployment before review', () => {
     expect(() => assertPreparationNetwork(CHAINS.bsc.chainId, CHAINS.polygon)).toThrow(/network does not match/i);
+  });
+
+  it('keeps the validated display order identical to comprarBilhete(uint8[]) calldata', () => {
+    const displayed = validateTicketNumbers([...validTicket].reverse());
+    const iface = new Interface(LOTTERY_ABI);
+    const decoded = iface.decodeFunctionData('comprarBilhete', iface.encodeFunctionData('comprarBilhete', [displayed]));
+    expect(Array.from(decoded.numeros, Number)).toEqual(displayed);
   });
 });
