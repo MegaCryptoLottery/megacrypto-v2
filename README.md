@@ -39,6 +39,8 @@ The original repository contains only `README.md` and `index.html`. V2 imported 
 
 Avalanche and Base reuse the same configured address but were independently verified on-chain; their runtime bytecode hashes differ while the tested lottery read behavior is compatible. See [`docs/onchain-verification.md`](docs/onchain-verification.md). The original ABI specifies `comprarBilhete(uint8[])`, dynamic `precoBilhete`, jackpot/pool/prize reads, and `SorteioRealizado(requestId, maskSorteada)` / `BilheteComprado(jogador, quantidadeApostas)`, plus ERC-20 approval/allowance/balance functions. It mentions Chainlink VRF but includes no coordinator, subscription, key-hash, or callback configuration; V2 does not invent those values.
 
+The read-only dashboard’s exact supported data, bounded-history limits, and intentionally unavailable metrics are documented in [`docs/live-data-capabilities.md`](docs/live-data-capabilities.md).
+
 ## Deployment verification gate
 
 The source records above are centralized in `src/config/chains.ts`. To enable a disabled network, obtain and audit its independent deployment evidence, then update that chain's registry entry:
@@ -60,4 +62,3 @@ Add a typed `ChainConfig` record to `CHAINS` with its exact chain ID, explorer, 
 - Users review network, contract, payment, and estimated gas before their wallet is invoked.
 - Event records must be associated through indexed `roundId` and VRF `requestId`; array position is not a source of truth.
 - Final wallet confirmation is authoritative. The UI never simulates success.
-

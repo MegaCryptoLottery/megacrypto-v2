@@ -41,3 +41,34 @@
 .modal { display: flex; flex-direction: column; width: min(720px, 100%); max-height: min(88vh, 820px); padding: 0; overflow: hidden; background: linear-gradient(145deg, #0d1b31fa, #080c20fc); box-shadow: 0 30px 80px #000c, 0 0 55px #7043d33d; }
 .modal .notice { margin: 16px 0 0; padding: 12px; color: #cad1e2; background: #ffffff09; border: 1px solid #ffffff12; border-radius: 10px; font-size: 12px; line-height: 1.6; }
 @media (max-width: 767px) { .modal-backdrop { align-items: end; padding: 12px; } .modal { width: 100%; max-height: calc(100vh - 24px); max-height: calc(100dvh - 24px); padding: 0; border-radius: 17px; } }
+
+/* Read-only data panels intentionally use normal flow and share the page container. */
+.live-status-row { display:flex; align-items:center; justify-content:space-between; gap:12px; margin:12px 0; }
+.live-status-row .status { margin:0; }
+.refresh-live-data { flex:0 0 auto; padding:8px 12px; color:#dfeaff; background:#11213a; border:1px solid #6b96cb88; border-radius:8px; font-size:11px; font-weight:700; }
+.refresh-live-data:hover, .refresh-live-data:focus-visible { color:#fff7df; border-color:#e6bd57; outline:none; }
+.player-dashboard, .winner-history, .unavailable-history, .fairness { display:block; margin:20px 0; padding:22px; }
+.player-dashboard { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:18px; }
+.player-dashboard h2, .winner-history h2, .unavailable-history h2, .fairness h2 { margin:4px 0 8px; }
+.player-dashboard small, .data-limitation { color:#96a7c5; font-size:11px; line-height:1.5; }
+.claimable { min-width:210px; padding:14px; background:#0a172a96; border:1px solid #ffffff12; border-radius:11px; }
+.claimable span, .recorded-prizes span { display:block; color:#aab7d1; font-size:10px; font-weight:800; letter-spacing:.06em; }
+.claimable strong { display:block; margin-top:6px; color:#f2c85d; font-size:16px; }
+.ticket-history, .winner-records { display:grid; grid-column:1 / -1; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:10px; }
+.ticket-history article, .winner-records article { display:grid; gap:6px; padding:12px; background:#0814269c; border:1px solid #ffffff10; border-radius:10px; }
+.ticket-history article span, .winner-records article span { color:#a9b5ce; font-size:10px; }
+.ticket-history article b { color:#e4ecff; font:11px 'DM Mono',monospace; overflow-wrap:anywhere; }
+.ticket-history article a, .winner-records article a { color:#91b8f5; font-size:11px; }
+.player-dashboard .data-limitation { grid-column:1 / -1; margin:0; }
+.history-heading { display:flex; align-items:start; justify-content:space-between; gap:16px; }
+.history-heading label { display:grid; gap:5px; min-width:150px; color:#aab7d1; font-size:10px; font-weight:700; }
+.history-heading select { padding:8px; color:#e8efff; background:#0b182c; border:1px solid #6481b26e; border-radius:7px; }
+.recorded-prizes { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px; background:#c9973010; border:1px solid #dbb34e3e; border-radius:9px; }
+.recorded-prizes strong { color:#f2c85d; }
+.winner-records { margin-top:12px; }
+.winner-records article > b { color:#c5b2ff; font-size:11px; }
+.winner-records article > strong { color:#f2c85d; font-size:14px; }
+.unavailable-history code, .fairness code { color:#d4c2ff; }
+.fairness p { max-width:850px; color:#afbdd5; font-size:13px; line-height:1.6; }
+.fairness a { color:#f0c45a; font-size:12px; font-weight:700; }
+@media (max-width: 767px) { .live-status-row, .history-heading { align-items:stretch; flex-direction:column; } .refresh-live-data, .history-heading label { width:100%; } .player-dashboard { grid-template-columns:1fr; } .claimable { min-width:0; } .ticket-history, .winner-records { grid-column:auto; } }

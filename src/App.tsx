@@ -11,11 +11,14 @@ import { NetworkInfoPanel } from './components/NetworkInfoPanel';
 import { NumberPicker, normalizeTicketNumbers } from './components/NumberPicker';
 import { TransactionReview } from './components/TransactionReview';
 import { TrustBar } from './components/TrustBar';
+import { PlayerDashboard } from './components/PlayerDashboard';
+import { WinnerHistory } from './components/WinnerHistory';
 import type { ChainKey, LotterySnapshot, WalletState } from './types';
 import { displayToken, readLottery } from './web3/lottery';
 import { friendlyError, prepareTicketPurchase, submitReviewed, type TransactionReview as Review } from './web3/transactions';
 import { appKitNetworkByChainId, ensureAppKitModal } from './web3/appkit';
 import { WalletController } from './web3/wallet';
+import { readSelectedNetworkState, type SelectedNetworkState } from './web3/player';
 
 const navigationItems = [
   ['#play', 'Play'], ['#fairness', 'How It Works'], ['#draws', 'Draws'], ['#winners', 'Winners'], ['#tickets', 'My Tickets'], ['#stats', 'Stats'], ['#faq', 'FAQ'],
@@ -29,6 +32,9 @@ export default function App() {
   const [status, setStatus] = useState('Select a verified network to view live on-chain data.');
   const [review, setReview] = useState<Review>();
   const [busy, setBusy] = useState(false);
+  const [playerState, setPlayerState] = useState<SelectedNetworkState>();
+  const [liveRefresh, setLiveRefresh] = useState(0);
+  const [lastUpdated, setLastUpdated] = useState<Date>();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const firstMobileLink = useRef<HTMLAnchorElement>(null);
   const controller = useMemo(() => new WalletController(setWallet), []);
@@ -58,10 +64,16 @@ export default function App() {
   }, [mobileMenuOpen]);
   useEffect(() => {
     setSnapshot({});
-    readLottery(chain)
-      .then((next) => { setSnapshot(next); setStatus('Live contract data'); })
+    setPlayerState(undefined);
+    Promise.all([readLottery(chain), readSelectedNetworkState(chain, wallet.address)])
+      .then(([next, nextPlayerState]) => {
+        setSnapshot(next);
+        setPlayerState(nextPlayerState);
+        setLastUpdated(new Date());
+        setStatus('Live contract data');
+      })
       .catch((error) => setStatus(error.message));
-  }, [chain]);
+  }, [chain, liveRefresh, wallet.address]);
 
   const connect = async () => {
     try {
@@ -101,6 +113,7 @@ export default function App() {
         : `Ticket confirmed in block ${receipt?.blockNumber ?? 'pending'}.`);
       setReview(undefined);
       if (review.kind === 'ticket') setNumbers([]);
+      setLiveRefresh((version) => version + 1);
     } catch (error) { setStatus(friendlyError(error)); }
     finally { setBusy(false); }
   };
@@ -132,26 +145,24 @@ export default function App() {
       </div>}
 
       <div role="main" className="content-container">
-      <GlobalPrizeDashboard />
-      <div id="stats"><GlobalStats /></div>
+      <GlobalPrizeDashboard refreshKey={liveRefresh} />
+      <div id="stats"><GlobalStats selectedState={playerState} /></div>
 
-      <p id="top" className="status" role="status">
-        {status}{wallet.connected && activeChain && activeChain.key !== selected ? ` · Wallet is on ${activeChain.name}` : ''}
-      </p>
+      <div className="live-status-row"><p id="top" className="status" role="status">
+        {status}{lastUpdated ? ` · Last updated: ${lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}` : ''}{wallet.connected && activeChain && activeChain.key !== selected ? ` · Wallet is on ${activeChain.name}` : ''}
+      </p><button className="refresh-live-data" type="button" onClick={() => setLiveRefresh((version) => version + 1)}>Refresh live data</button></div>
       <section id="play" className="game-section" aria-label="Play MegaCrypto Lottery">
         <div className="play-layout">
           <NetworkInfoPanel chain={chain} ticketPrice={displayToken(snapshot.ticketPrice, chain.contracts.tokenDecimals)} />
           <div className="play-picker"><NumberPicker value={numbers} onChange={setNumbers} /></div>
-          <DrawPrizePanel network={chain.name} jackpot={displayToken(snapshot.jackpot, chain.contracts.tokenDecimals)} ticketPrice={displayToken(snapshot.ticketPrice, chain.contracts.tokenDecimals)} numbers={numbers} />
+          <DrawPrizePanel network={chain.name} chainId={chain.chainId} jackpot={displayToken(snapshot.jackpot, chain.contracts.tokenDecimals)} weeklyPool={displayToken(snapshot.weeklyPool, chain.contracts.tokenDecimals)} ticketPrice={displayToken(snapshot.ticketPrice, chain.contracts.tokenDecimals)} numbers={numbers} />
         </div>
         <button className="review-ticket" disabled={numbers.length !== 15} onClick={reviewTicket}>Continue to transaction review <span>→</span></button>
       </section>
       <NetworkGrid selected={selected} onSelect={setSelected} />
-      <section className="cards" aria-label="Lottery records">
-        <article id="tickets" className="panel"><p className="eyebrow">YOUR POSITION</p><h2>Tickets & rewards</h2><p className="empty">Connect a wallet to read your verified ticket and reward state.</p></article>
-        <article id="draws" className="panel"><p className="eyebrow">DRAW HISTORY</p><h2>Public, not simulated</h2><p className="empty">Historic rounds are only shown from bounded on-chain event queries.</p></article>
-      </section>
-      <div id="winners" className="sr-only">Winner records are unavailable until verified event-backed history is displayed.</div>
+      <PlayerDashboard chain={chain} state={playerState} wallet={wallet.address} />
+      <WinnerHistory refreshKey={liveRefresh} />
+      <section id="draws" className="panel unavailable-history"><p className="eyebrow">DRAW HISTORY</p><h2>Verified draw events unavailable</h2><p className="empty">The deployed ABI exposes <code>SorteioRealizado</code>, but an audited deployment start block is not configured. V2 intentionally does not perform an unbounded event scan.</p></section>
       <div id="fairness"><Fairness /></div>
       <TrustBar />
       </div>
