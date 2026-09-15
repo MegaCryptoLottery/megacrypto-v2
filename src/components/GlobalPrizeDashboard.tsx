@@ -14,7 +14,14 @@ export function GlobalPrizeDashboard() {
 
   return (
     <section className="global-prizes panel" aria-labelledby="global-prize-title">
-      <div className="planet" aria-hidden="true"><i /><b /></div>
+      <img
+        src={`${import.meta.env.BASE_URL}assets/hero/planet-hero.webp`}
+        alt=""
+        aria-hidden="true"
+        decoding="async"
+        className="hero-earth"
+      />
+      <div aria-hidden="true" className="hero-earth-overlay" />
       <h2 id="global-prize-title" className="sr-only">Live multi-chain prizes</h2><div className="global-prize-controls"><button className="secondary refresh" onClick={refresh} disabled={loading}>{loading ? 'Refreshing…' : '↻ Refresh'}</button></div>
       <div className="global-prize-grid">
         <div className="global-total jackpot-total"><span>Global jackpot</span><small>All networks combined</small><strong>{data ? display(data.jackpot) : 'Loading…'} <em>USDT</em></strong></div>

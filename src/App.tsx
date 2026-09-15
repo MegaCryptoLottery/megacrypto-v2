@@ -67,7 +67,7 @@ export default function App() {
     <div className="app-shell">
       <header className="section-shell app-header">
       <nav className="content-container">
-        <a className="brand" href="#top"><span className="brand-crown" aria-hidden="true">♛</span><span>MEGA<em>CRYPTO</em><b>LOTTERY</b></span><i>V2</i></a>
+        <a className="brand" href="#top"><img className="brand-crown" src={`${import.meta.env.BASE_URL}assets/brand/megacrypto-crown.webp`} alt="" aria-hidden="true" style={{ width: 'clamp(42px, 4vw, 58px)', height: 'clamp(42px, 4vw, 58px)', objectFit: 'contain' }} /><span>MEGA<em>CRYPTO</em><b>LOTTERY</b></span><i>V2</i></a>
         <div className="nav-links" aria-label="Primary navigation">
           <a href="#play">Play</a><a href="#fairness">How It Works</a><a href="#draws">Draws</a><a href="#winners">Winners</a><a href="#tickets">My Tickets</a><a href="#stats">Stats</a><a href="#faq">FAQ</a>
         </div>
