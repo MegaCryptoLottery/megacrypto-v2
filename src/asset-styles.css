@@ -1,4 +1,11 @@
 .brand-crown { object-fit: contain; }
+.trophy-mark { object-fit: contain; pointer-events: none; }
+.prize-divider { display: flex; align-items: center; justify-content: center; gap: 7px; width: min(100%, 210px); height: 9px; margin: 8px auto 4px; color: #f4ca68; }
+.prize-divider::before, .prize-divider::after { content: ''; width: 46%; height: 1px; background: linear-gradient(90deg, transparent, #f4ca68, transparent); box-shadow: 0 0 8px #e3ad3d99; }
+.prize-divider::after { transform: scaleX(-1); }
+.prize-divider { background: linear-gradient(45deg, transparent 47%, currentColor 48%, currentColor 52%, transparent 53%) center / 8px 8px no-repeat; filter: drop-shadow(0 0 4px #e3ad3d99); }
+.prize-copy { max-width: 245px; margin: 0 auto; color: #c6d0e4; font-size: 11px; line-height: 1.35; }
 .hero-earth { position: absolute; inset: 0; z-index: 0; width: 100%; height: 100%; object-fit: cover; object-position: center 62%; opacity: 0.27; pointer-events: none; border-radius: inherit; }
 .hero-earth-overlay { position: absolute; inset: 0; z-index: 0; pointer-events: none; border-radius: inherit; background: linear-gradient(90deg, rgba(4, 16, 32, 0.84), rgba(11, 10, 38, 0.67) 42%, rgba(29, 7, 65, 0.68) 72%, rgba(4, 16, 32, 0.9)); }
 @media (max-width: 767px) { .hero-earth { object-position: center 70%; opacity: 0.11; } }
+@media (max-width: 767px) { .prize-divider { margin-top: 6px; } .prize-copy { max-width: 220px; font-size: 10px; } }

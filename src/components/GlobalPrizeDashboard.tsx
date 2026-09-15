@@ -24,9 +24,9 @@ export function GlobalPrizeDashboard() {
       <div aria-hidden="true" className="hero-earth-overlay" />
       <h2 id="global-prize-title" className="sr-only">Live multi-chain prizes</h2><div className="global-prize-controls"><button className="secondary refresh" onClick={refresh} disabled={loading}>{loading ? 'Refreshing…' : '↻ Refresh'}</button></div>
       <div className="global-prize-grid">
-        <div className="global-total jackpot-total"><span>Global jackpot</span><small>All networks combined</small><strong>{data ? display(data.jackpot) : 'Loading…'} <em>USDT</em></strong></div>
+        <div className="global-total jackpot-total"><span>Global jackpot</span><small>All networks combined</small><strong>{data ? display(data.jackpot) : 'Loading…'} <em>USDT</em></strong><div className="prize-divider" aria-hidden="true" /><p className="prize-copy">Total prize pool across all 6 networks</p></div>
         <div className="trophy-column"><TrophyMark /></div>
-        <div className="weekly-total"><span>This week’s prizes</span><small>All networks</small><strong>{data ? display(data.weekly) : 'Loading…'} <em>USDT</em></strong></div>
+        <div className="weekly-total"><span>This week’s prizes</span><small>All networks</small><strong>{data ? display(data.weekly) : 'Loading…'} <em>USDT</em></strong><div className="prize-divider" aria-hidden="true" /><p className="prize-copy">Current weekly prize pool across all networks</p></div>
         <div className="network-summary"><span>6 blockchain networks</span><div className="network-badges">{Object.values(data?.networks ?? []).map((item) => <b key={item.chain.key} className={item.error ? 'unavailable' : ''}><NetworkIcon chain={item.chain.key} label={item.chain.name} />{item.chain.name}</b>) ?? null}{!data && Object.values(['polygon', 'bsc', 'arbitrum', 'base', 'optimism', 'avalanche'] as const).map((key) => <b key={key}><NetworkIcon chain={key} />{{ polygon: 'Polygon', bsc: 'BNB Smart Chain', arbitrum: 'Arbitrum One', base: 'Base', optimism: 'Optimism', avalanche: 'Avalanche' }[key]}</b>)}</div></div>
       </div>
       <i className="live-reading">{data ? 'Live read-only data' : 'Reading networks…'}</i>
