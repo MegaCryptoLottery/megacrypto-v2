@@ -2,6 +2,17 @@ import type { ReactNode } from 'react';
 import type { ChainKey } from '../types';
 
 export function NetworkIcon({ chain, label }: { chain: ChainKey; label?: string }) {
+  const officialAssets: Partial<Record<ChainKey, string>> = {
+    bsc: `${import.meta.env.BASE_URL}assets/networks/bnb-chain.svg`,
+    base: `${import.meta.env.BASE_URL}assets/networks/base.svg`,
+    optimism: `${import.meta.env.BASE_URL}assets/networks/optimism.svg`,
+  };
+
+  const officialAsset = officialAssets[chain];
+  if (officialAsset) {
+    return <img className={`network-icon ${chain}`} src={officialAsset} alt="" aria-hidden="true" style={{ display: 'block', objectFit: 'contain' }} />;
+  }
+
   const marks: Record<ChainKey, ReactNode> = {
     polygon: <><path d="m8 13 5-3 5 3v6l-5 3-5-3v-6Z" /><path d="m18 13 5-3 5 3v6l-5 3-5-3" /></>,
     bsc: <><path d="m16 5 5 3-5 3-5-3 5-3Zm-7 5 5 3-5 3-5-3 5-3Zm14 0 5 3-5 3-5-3 5-3ZM16 15l5 3-5 3-5-3 5-3Zm-7 5 5 3-5 3-5-3 5-3Zm14 0 5 3-5 3-5-3 5-3Z" /></>,
@@ -12,4 +23,3 @@ export function NetworkIcon({ chain, label }: { chain: ChainKey; label?: string 
   };
   return <svg className={`network-icon ${chain}`} viewBox="0 0 32 32" role="img" aria-label={label ?? chain}>{marks[chain]}</svg>;
 }
-
