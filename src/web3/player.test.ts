@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { formatUsdt, normalizeUsdt } from './amounts';
 import { maskToNumbers, CURRENT_BET_SCAN_LIMIT, WINNER_HISTORY_LIMIT } from './player';
+import { drawPageEnd, EVENT_SCAN_CHUNK_SIZE, EVENT_SCAN_CHUNKS_PER_PAGE } from './events';
+import { CHAINS } from '../config/chains';
 
 describe('verified lottery data formatting', () => {
   it('formats six-decimal selected-network jackpot and weekly pool', () => {
@@ -22,12 +24,31 @@ describe('verified lottery data formatting', () => {
 });
 
 describe('on-chain ticket reconstruction bounds', () => {
-  it('decodes the contract mask bits 0–24 into ticket numbers 1–25', () => {
-    expect(maskToNumbers((1n << 0n) | (1n << 4n) | (1n << 24n))).toEqual([1, 5, 25]);
+  it('decodes the verified contract mask bits 1–25 into ticket numbers 1–25', () => {
+    expect(maskToNumbers((1n << 1n) | (1n << 5n) | (1n << 25n))).toEqual([1, 5, 25]);
   });
 
   it('keeps read ranges explicitly bounded', () => {
     expect(CURRENT_BET_SCAN_LIMIT).toBe(500);
     expect(WINNER_HISTORY_LIMIT).toBe(100);
+  });
+
+  it('uses the verified draw mask convention for a real Polygon draw', () => {
+    expect(maskToNumbers(14_296_958n)).toEqual([1, 2, 3, 4, 5, 6, 8, 9, 10, 13, 17, 19, 20, 22, 23]);
+  });
+
+  it('pages draw scans in a fixed bounded range rather than from block zero', () => {
+    expect(drawPageEnd(93_187_959, 94_000_000)).toBe(93_237_958);
+    expect(EVENT_SCAN_CHUNK_SIZE).toBe(2_000);
+    expect(EVENT_SCAN_CHUNKS_PER_PAGE).toBe(25);
+  });
+
+  it('configures only independently evidenced deployment blocks', () => {
+    expect(CHAINS.polygon.contracts.deploymentStartBlock).toBe(93_187_959);
+    expect(CHAINS.arbitrum.contracts.deploymentStartBlock).toBe(503_193_432);
+    expect(CHAINS.base.contracts.deploymentStartBlock).toBe(51_106_590);
+    expect(CHAINS.optimism.contracts.deploymentStartBlock).toBe(156_703_895);
+    expect(CHAINS.avalanche.contracts.deploymentStartBlock).toBe(94_904_282);
+    expect(CHAINS.bsc.contracts.deploymentStartBlock).toBeUndefined();
   });
 });

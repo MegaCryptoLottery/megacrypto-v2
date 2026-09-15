@@ -71,4 +71,12 @@
 .unavailable-history code, .fairness code { color:#d4c2ff; }
 .fairness p { max-width:850px; color:#afbdd5; font-size:13px; line-height:1.6; }
 .fairness a { color:#f0c45a; font-size:12px; font-weight:700; }
+.draw-health, .fairness-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:8px; margin-top:14px; }
+.draw-health span, .fairness-grid article { padding:10px; color:#aebbd2; background:#0714269c; border:1px solid #ffffff10; border-radius:9px; font-size:10px; }
+.fairness-grid article { display:grid; gap:6px; }
+.fairness-grid article b { color:#e7efff; font-size:12px; }
+.fairness-grid article strong { font-size:11px; text-transform:uppercase; }
+.fairness-grid article strong.integration-verified { color:#62e0ae; }
+.fairness-grid article strong.verification-pending { color:#f2c45e; }
+.fairness-grid article span, .fairness-grid article small { overflow-wrap:anywhere; }
 @media (max-width: 767px) { .live-status-row, .history-heading { align-items:stretch; flex-direction:column; } .refresh-live-data, .history-heading label { width:100%; } .player-dashboard { grid-template-columns:1fr; } .claimable { min-width:0; } .ticket-history, .winner-records { grid-column:auto; } }

@@ -10,8 +10,8 @@ export type CurrentTicket = { index: number; wallet: string; mask: bigint; numbe
 export type WinnerRecord = { index: number; wallet: string; amount: bigint; timestamp: bigint; type: string; chain: ChainConfig };
 export type SelectedNetworkState = { currentBets: number; scannedBets: number; currentPlayers: number; tickets: CurrentTicket[]; claimable?: bigint; error?: string };
 
-/** The contract stores each ticket as bits 0–24 for lottery numbers 1–25. */
-export const maskToNumbers = (mask: bigint) => Array.from({ length: 25 }, (_, index) => index + 1).filter((number) => (mask & (1n << BigInt(number - 1))) !== 0n);
+/** Verified source uses `mask |= 1 << num`, so bits 1–25 represent numbers 1–25. */
+export const maskToNumbers = (mask: bigint) => Array.from({ length: 25 }, (_, index) => index + 1).filter((number) => (mask & (1n << BigInt(number))) !== 0n);
 
 export async function readSelectedNetworkState(chain: ChainConfig, wallet?: string): Promise<SelectedNetworkState> {
   if (!chain.contracts.lottery || chain.contracts.status !== 'verified') throw new Error(`${chain.name} is not verified.`);

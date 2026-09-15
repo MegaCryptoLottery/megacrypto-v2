@@ -13,6 +13,7 @@ import { TransactionReview } from './components/TransactionReview';
 import { TrustBar } from './components/TrustBar';
 import { PlayerDashboard } from './components/PlayerDashboard';
 import { WinnerHistory } from './components/WinnerHistory';
+import { DrawHistory } from './components/DrawHistory';
 import type { ChainKey, LotterySnapshot, WalletState } from './types';
 import { displayToken, readLottery } from './web3/lottery';
 import { friendlyError, prepareTicketPurchase, submitReviewed, type TransactionReview as Review } from './web3/transactions';
@@ -162,7 +163,7 @@ export default function App() {
       <NetworkGrid selected={selected} onSelect={setSelected} />
       <PlayerDashboard chain={chain} state={playerState} wallet={wallet.address} />
       <WinnerHistory refreshKey={liveRefresh} />
-      <section id="draws" className="panel unavailable-history"><p className="eyebrow">DRAW HISTORY</p><h2>Verified draw events unavailable</h2><p className="empty">The deployed ABI exposes <code>SorteioRealizado</code>, but an audited deployment start block is not configured. V2 intentionally does not perform an unbounded event scan.</p></section>
+      <DrawHistory refreshKey={liveRefresh} />
       <div id="fairness"><Fairness /></div>
       <TrustBar />
       </div>

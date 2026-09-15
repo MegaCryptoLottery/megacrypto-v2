@@ -41,6 +41,8 @@ Avalanche and Base reuse the same configured address but were independently veri
 
 The read-only dashboard’s exact supported data, bounded-history limits, and intentionally unavailable metrics are documented in [`docs/live-data-capabilities.md`](docs/live-data-capabilities.md).
 
+The independently evidenced deployment blocks, bounded `SorteioRealizado` scan design, mask semantics, and per-network Chainlink VRF audit are documented in [`docs/draw-history-vrf-audit.md`](docs/draw-history-vrf-audit.md).
+
 ## Deployment verification gate
 
 The source records above are centralized in `src/config/chains.ts`. To enable a disabled network, obtain and audit its independent deployment evidence, then update that chain's registry entry:
