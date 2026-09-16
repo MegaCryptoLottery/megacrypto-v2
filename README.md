@@ -45,6 +45,8 @@ The independently evidenced deployment blocks, bounded `SorteioRealizado` scan d
 
 The read-only assessment of whether the existing deployments can safely support scheduled draw automation is documented in [`docs/draw-automation-audit.md`](docs/draw-automation-audit.md). It deliberately leaves unverified write access, timing, role, and subscription details unresolved rather than claiming an Automation integration is safe.
 
+The follow-up source-versus-runtime and automation-safety evidence matrix is documented in [`docs/contract-source-comparison.md`](docs/contract-source-comparison.md).
+
 ## Deployment verification gate
 
 The source records above are centralized in `src/config/chains.ts`. To enable a disabled network, obtain and audit its independent deployment evidence, then update that chain's registry entry:

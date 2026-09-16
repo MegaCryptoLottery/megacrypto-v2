@@ -88,3 +88,9 @@ Derive only these states from evidence: `Manual Contingency` for `requestId == 0
 
 Until then, **no network is approved for unattended draw initiation**, and no redeployment conclusion is justified from the available evidence.
 
+## 2026-09-15 recovered-source follow-up
+
+The project-owner report describes recovered Solidity for Polygon, Arbitrum, Base, Optimism, and Avalanche with `solicitarSorteio() external onlyOwner`, `simularSorteioManual(uint256) external onlyOwner`, a VRF v2.5 request path, and `lastRequestId`. The actual Solidity files, compiler input, metadata hash, and deployed-source verification artifact were not included in this workspace or the V2 repository. Public explorer access currently exposes a stub source record for the Polygon address, not that recovered source text.
+
+Accordingly, this report does **not** promote those reported declarations to deployed-runtime facts. The dedicated source comparison records exactly what is corroborated and the additional evidence required: [contract-source-comparison.md](contract-source-comparison.md).
+
