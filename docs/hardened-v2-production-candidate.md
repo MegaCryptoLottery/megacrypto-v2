@@ -7,23 +7,27 @@ Audit date: 2026-09-16. **Status: not eligible for testnet or production.**
 | Field | Value |
 |---|---|
 | Source path | `contracts-v2/contracts-production/MegaCryptoLotteryV2ProductionCandidate.sol` |
-| SHA-256 | `0b5f9d87b3b16af729db419848d39c4f3cbbff629821c0b439feb897a4b6d98d` |
+| SHA-256 | `34976d631486608192edadaf6643be26b8689f2ef9379427e7c9b5ea9fe84139` |
 | Solidity target | `0.8.28`, optimizer enabled (200 runs), Shanghai EVM target |
 | Chainlink recommended pin | `@chainlink/contracts@1.5.0` |
 | OpenZeppelin recommended pin | `@openzeppelin/contracts@5.6.1` |
-| ABI hash | Not generated: official dependencies could not be installed/compiled in this environment |
+| Official-import compilation | Passed locally on 2026-09-16 using exact npm package tarballs, solc `0.8.28+commit.7893614a.Emscripten.clang`, optimizer 200, Shanghai, via-IR |
+| ABI SHA-256 | `11065f8c536172e53211a93ea1474f914066aca821353ac09a39c9f151d8ee41` |
+| Bytecode SHA-256 | Not applicable: this deliberately abstract integration target has no deployable bytecode |
 
-This source is an **official-import architecture target**, not the final full lottery implementation. It proves the intended inheritance and API surface: `VRFConsumerBaseV2Plus`, `VRFV2PlusClient`, `IVRFCoordinatorV2Plus`, `AutomationCompatibleInterface`, `SafeERC20`, `ReentrancyGuard`, and `Ownable2Step`.
+This source is an **official-import architecture target**, not the final full lottery implementation. It proves the intended imports and API surface: `VRFConsumerBaseV2Plus`, `VRFV2PlusClient`, `IVRFCoordinatorV2Plus`, `AutomationCompatibleInterface`, `SafeERC20`, and `ReentrancyGuard`.
+
+`VRFConsumerBaseV2Plus` itself inherits Chainlink's `ConfirmedOwner`, which already supplies two-step ownership. It cannot safely be combined with OpenZeppelin `Ownable2Step`: both bases define `owner`, `onlyOwner`, ownership-transfer methods, and an ownership event. The compile failure was reproduced before removing that invalid multiple inheritance. Therefore the final consumer must use the Chainlink base's two-step ownership surface; OpenZeppelin `Ownable2Step` is **not appropriate in the same inheritance tree**.
 
 ## Critical architectural constraint
 
-The official `VRFConsumerBaseV2Plus` authenticates the coordinator passed to its constructor. That makes coordinator identity immutable for a non-upgradeable consumer. Therefore the final production design must use:
+The official `VRFConsumerBaseV2Plus` authenticates callbacks through `rawFulfillRandomWords`. Its `s_vrfCoordinator` can be changed only through the official owner-or-coordinator `setCoordinator` path. Therefore the final production design must:
 
-- immutable coordinator per deployment;
-- future-round updates only for coordinator-compatible parameters such as subscription/key-hash/callback settings where the official API allows them; and
-- controlled successor migration for a coordinator replacement.
+- snapshot the coordinator/configuration per round;
+- accept callbacks only for that snapshotted round/request; and
+- use a delayed, audited configuration or successor-migration policy before any coordinator replacement.
 
-It must not claim that a mutable coordinator setting remains compatible with the official base consumer unless the final audited architecture provides an official, separately authenticated router pattern.
+It must not treat the official mutable coordinator hook as sufficient on its own: per-round snapshotting and callback/request binding remain mandatory.
 
 ## Required before this can become the sole candidate
 
