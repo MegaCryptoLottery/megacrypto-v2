@@ -9,22 +9,38 @@ Audit date: 2026-09-15. This is a read-only evidence record. It does not add an 
 - **UNVERIFIED:** cannot be demonstrated from the current public minimal ABI/runtime evidence.
 - **UNAVAILABLE:** BNB lacks reproducible source/creation evidence in the current audit.
 
+## Recovered source inventory
+
+The owner supplied five modern VRF v2.5 source variants. Their SHA-256 digests are retained as audit evidence; the files are not committed to this public frontend repository.
+
+| Network | Contract name | SHA-256 |
+|---|---|---|
+| Polygon | `MegaCryptoLottery` | `a73bda0280017241ae1e3a16f2398c0a694ae63b6062c2fff87ad23c416c1c23` |
+| Arbitrum One | `MegaCryptoLotteryArbitrum` | `62862f720e27c6866ef171f46ba4725b8119c6edd0bb08438f5f880ec310f531` |
+| Base | `MegaCryptoLotteryBase` | `0b148fe930d52d910d40ddd9a8051b4c6032f7639756fe25a26559460b0190eb` |
+| Optimism | `MegaCryptoLotteryOptimism` | `93474879245334cd3797ecf8e5c93c5f92e7b913f507e904cd598f2c646a3fb5` |
+| Avalanche | `MegaCryptoLotteryAvalanche` | `2793d216886e21c59be522b493524ce169fcc2eaf09cad9b8379357efb9ca67c` |
+
+An extra pasted `MegacryptoArbitrum` file is an older, materially different stub (custom owner field, incomplete VRF request, different manual result processing). It is **not** one of the five recovered modern deployment candidates and was excluded from the comparison.
+
 ## Runtime and source compatibility
 
 | Network | Deployment/runtime | Recovered-source text supplied | `solicitarSorteio` / manual selector proven against runtime | Classification |
 |---|---|---|---|---|
-| Polygon | VERIFIED non-empty code and recorded runtime hash | Not present in workspace/repo | UNVERIFIED | Source-to-runtime match UNVERIFIED |
-| Arbitrum One | VERIFIED non-empty code and recorded runtime hash | Not present in workspace/repo | UNVERIFIED | Source-to-runtime match UNVERIFIED |
-| Base | VERIFIED non-empty code and recorded runtime hash | Not present in workspace/repo | UNVERIFIED | Source-to-runtime match UNVERIFIED |
-| Optimism | VERIFIED non-empty code and recorded runtime hash | Not present in workspace/repo | UNVERIFIED | Source-to-runtime match UNVERIFIED |
-| Avalanche | VERIFIED non-empty code and recorded runtime hash | Not present in workspace/repo | UNVERIFIED | Source-to-runtime match UNVERIFIED |
+| Polygon | VERIFIED non-empty code, runtime hash, and Blockscout “exact match” source verification | Present | `solicitarSorteio` `0x9b61bfea`; manual `0x35e0388b`; VRF/ownership getters shown in deployed ABI | **MATCH VERIFIED** |
+| Arbitrum One | VERIFIED non-empty code, runtime hash, source/deployment evidence in prior audit | Present | Direct current selector interrogation not reproduced in this session | **LIKELY MATCH** |
+| Base | VERIFIED non-empty code, runtime hash, source/deployment evidence in prior audit | Present | Direct current selector interrogation not reproduced in this session | **LIKELY MATCH** |
+| Optimism | VERIFIED non-empty code, runtime hash, source/deployment evidence in prior audit | Present | Direct current selector interrogation not reproduced in this session | **LIKELY MATCH** |
+| Avalanche | VERIFIED non-empty code, runtime hash, SnowTrace deployment/source evidence in prior audit | Present | Direct current selector interrogation not reproduced in this session | **LIKELY MATCH** |
 | BNB Smart Chain | VERIFIED non-empty code and recorded runtime hash | No | UNAVAILABLE | VERIFICATION PENDING |
 
-The public Polygon explorer currently presents a `StubContract.sol` record, not a downloadable recovered implementation. A runtime bytecode hash alone cannot prove source equivalence because compiler metadata, optimizer settings, linked libraries, constructor arguments, and proxy behavior affect comparison.
+Polygon’s public Blockscout record now reports `MegaCryptoLottery`, compiler `0.8.34`, source code “verified (exact match),” and the constructor arguments. The supplied file’s `pragma ^0.8.20` permits that compiler version. This is stronger than a bytecode hash but does not make the other networks byte-for-byte matches without their equivalent current evidence.
 
 ## Ownership audit
 
-`VRFConsumerBaseV2Plus` does not by itself prove the ownership implementation used by a deployment. The recovered-source report states `onlyOwner`, but the current audited frontend ABI does not include `owner()`, `transferOwnership(address)`, `acceptOwnership()`, `pendingOwner()`, or role getters. No reproducible read-only RPC owner result is available in the audit record.
+The recovered modern sources inherit `VRFConsumerBaseV2Plus`. Polygon’s exact verified dependency source shows its `ConfirmedOwner` → `ConfirmedOwnerWithProposal` ownership chain. The deployed Polygon ABI exposes `owner()` (`0x8da5cb5b`), `transferOwnership(address)` (`0xf2fde38b`), and `acceptOwnership()` (`0x79ba5097`). It is a two-step proposal/acceptance model; the pending-owner storage is private and no public `pendingOwner()` getter is exposed by this ABI. There is no `renounceOwnership()` in the supplied modern source or exposed Polygon ABI.
+
+The actual owner values below remain unverified because the public explorer’s current Read/Write view requires a wallet connection and this audit does not connect a wallet. No owner-changing call was attempted.
 
 | Network | Current owner (full / shortened) | Ownership mechanism | Renounced / pending owner / transfer support |
 |---|---|---|---|
@@ -37,9 +53,9 @@ The public Polygon explorer currently presents a `StubContract.sol` record, not 
 
 Before ownership is reported, reproduce the exact inherited OpenZeppelin/Chainlink ownership version from the source metadata, then perform `eth_call` against its verified getter(s) on every chain. Never infer the owner from deployer, explorer labels, or a common address.
 
-## Reported source behavior — not runtime confirmation
+## Recovered-source draw behavior
 
-The recovery report says the five source files contain:
+All five supplied modern source files contain:
 
 ```solidity
 function solicitarSorteio() external onlyOwner
@@ -48,26 +64,28 @@ function simularSorteioManual(uint256 sementeManual) external onlyOwner
 
 and that `solicitarSorteio` requires `apostasDaSemana.length > 0`, requests VRF v2.5 randomness, writes `lastRequestId`, and emits `SorteioSolicitado(lastRequestId)`; fulfillment calls `_processarSorteio(requestId, randomWords[0])`; manual contingency derives a local word and calls `_processarSorteio(0, randomWord)`.
 
-This is consistent with the already verified facts that non-BNB sources use the VRF consumer path, emit `SorteioSolicitado`, and historical `SorteioRealizado` records have `requestId == 0`. It is **not enough** to verify exact selectors, modifiers, storage layout, setters, withdrawals, percentages, or runtime equivalence. Do not expose these functions in the public frontend until their ABI and runtime are independently verified.
+At source level, `solicitarSorteio` requires `apostasDaSemana.length > 0`, constructs `VRFV2PlusClient.RandomWordsRequest`, calls `s_vrfCoordinator.requestRandomWords`, writes `lastRequestId`, and emits `SorteioSolicitado`. `fulfillRandomWords` calls `_processarSorteio(requestId, randomWords[0])`. Manual contingency requires tickets, derives a word using caller seed, `block.timestamp`, and `block.prevrandao`, then calls `_processarSorteio(0, randomWord)`.
+
+Polygon’s exact verified ABI independently exposes the normal/manual selectors, `lastRequestId`, `s_subscriptionId`, `keyHash`, `callbackGasLimit`, `requestConfirmations`, `numWords`, `payWithNative`, `s_vrfCoordinator`, and all three ownership functions above. It also exposes mutable configuration setters including `setCoordinator`, `setSubscriptionId`, `setKeyHash`, `setCallbackGasLimit`, `setNativePayment`, price/percentage/wallet setters, and transfer ownership. Those write methods are deliberately not added to V2’s public frontend ABI.
 
 ## Pending-request and ticket-cutoff assessment
 
-**SECURITY CONCERN — conditional on the reported source being accurate.** If there is only `lastRequestId` and no on-chain pending-request/round snapshot lock, the following risks exist:
+**SECURITY CONCERN — VERIFIED in recovered source and MATCH VERIFIED for Polygon; LIKELY for the other four recovered variants.** There is only `lastRequestId`; no `requestPending`, request-to-round mapping, or ticket snapshot exists. Therefore:
 
 1. The owner can request two VRF draws before the first callback. The later callback might process an empty, replaced, or newly populated live ticket array depending on `_processarSorteio` behavior.
 2. Tickets bought after a request but before fulfillment may be included in the earlier request because fulfillment reads live `apostasDaSemana`, rather than a frozen round snapshot.
 3. A UI purchase pause or a keeper-side “draw closed” flag is only a **UX/operational mitigation**. Direct calls to `comprarBilhete` would remain possible unless the deployed contract enforces closure.
 4. A request/result event pair alone is insufficient to prove a safe round mapping without a contract-provided request-to-round identifier/snapshot.
 
-These risks are not yet a proven deployed-runtime vulnerability because the recovered code has not been matched to each deployment. They are high-priority verification targets before any automation is considered.
+For Polygon, the exact deployed source/ABI result makes this a verified business-logic limitation. For Arbitrum, Base, Optimism, and Avalanche it remains likely until each current source/ABI record is reproduced in this audit. It is a high-priority blocker for unattended automation on all five.
 
 ## Manual contingency assessment
 
-If the reported manual entropy is derived from caller-supplied `sementeManual`, `block.timestamp`, and `block.prevrandao`, it is not Chainlink VRF and must be described as a trust-based emergency contingency. An owner can choose a seed before submission; block producers may have limited influence over block attributes; and an operator could decide when to submit. The frontend must show `Manual Contingency` for `requestId == 0`, never “Chainlink-verified randomness.”
+The recovered manual entropy is derived from caller-supplied `sementeManual`, `block.timestamp`, and `block.prevrandao`; it is not Chainlink VRF. An owner can choose a seed before submission; block producers may have limited influence over block attributes; and an operator controls timing. It is a trust-based emergency contingency, not cryptographically fair randomness. The frontend must show `Manual Contingency` for `requestId == 0`, never “Chainlink-verified randomness.”
 
 ## Schedule and direct Automation
 
-The current verified public ABI has no last-draw/next-draw/timer getter. If the reported source has no time gate beyond nonempty tickets, then **DRAW SCHEDULE IS NOT ENFORCED BY THE CURRENT CONTRACT**. An off-chain scheduler chooses when to request a draw; contracts cannot self-execute on time.
+The recovered modern sources contain no `lastDrawTimestamp`, `nextDrawTimestamp`, draw interval, deadline, round-close, pause, or ticket-sales-close state. The only normal-request gate is nonempty `apostasDaSemana`. Thus **DRAW SCHEDULE IS NOT ENFORCED BY THE CURRENT CONTRACT** in the recovered source. An off-chain scheduler chooses when to request; contracts cannot self-execute on time.
 
 If `solicitarSorteio` is actually `onlyOwner`, a Chainlink Automation registry, Automation forwarder, or wrapper cannot satisfy `msg.sender == owner` unless ownership is explicitly transferred to that exact caller or the contract contains a verified authorization mechanism. No such mechanism is confirmed. A multisig owner also cannot normally originate autonomous calls without a separately authorized executor.
 
