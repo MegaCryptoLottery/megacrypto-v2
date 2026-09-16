@@ -31,6 +31,17 @@ interface IVRFV2PlusCoordinator {
     function requestRandomWords(RandomWordsRequest calldata request) external returns (uint256 requestId);
 }
 
+/// @dev Canonical VRF v2.5 extra-args encoding copied only for local mock tests.
+///      The production deployment source must import VRFV2PlusClient from the
+///      pinned official Chainlink contracts package after independent review.
+library VRFV2PlusClientCompat {
+    bytes4 internal constant EXTRA_ARGS_V1_TAG = bytes4(keccak256("VRF ExtraArgsV1"));
+    struct ExtraArgsV1 { bool nativePayment; }
+    function argsToBytes(ExtraArgsV1 memory args) internal pure returns (bytes memory) {
+        return abi.encodeWithSelector(EXTRA_ARGS_V1_TAG, args);
+    }
+}
+
 interface IAutomationCompatible {
     function checkUpkeep(bytes calldata checkData) external view returns (bool upkeepNeeded, bytes memory performData);
     function performUpkeep(bytes calldata performData) external;
