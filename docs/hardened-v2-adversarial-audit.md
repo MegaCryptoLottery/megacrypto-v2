@@ -99,3 +99,7 @@ Analytical result for 1,000 / 10,000 / 100,000 tickets: callback cost remains O(
 
 No deployment, transaction, signature, wallet connection, production VRF request, Automation registration, ownership change, or fund movement occurred in this audit.
 
+## Pre-testnet follow-up
+
+The final local gate found and corrected an interface-critical VRF v2.5 defect: raw `abi.encode(bool)` is not the canonical v2.5 `ExtraArgsV1` representation. The reference now uses the tagged `EXTRA_ARGS_V1_TAG` encoding and tests the bytes observed by the local coordinator. It also adds a persistent per-round draw method and rejects a delayed callback after manual contingency. The exact production package/import and Chainlink release must still be independently compiled and audited; see [hardened-v2-pretestnet-gate.md](hardened-v2-pretestnet-gate.md).
+
