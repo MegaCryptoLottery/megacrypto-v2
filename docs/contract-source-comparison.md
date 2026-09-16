@@ -110,3 +110,47 @@ If the reported risks are confirmed, a future deployment should include an on-ch
 
 Until this evidence exists, direct Automation compatibility, current ownership, pending-request protection, ticket cutoff, and no-redeploy feasibility remain **UNVERIFIED**.
 
+## 2026-09-16 public-RPC runtime verification
+
+This follow-up used only `eth_getCode` and `eth_call` against the configured public RPC endpoints. It did not connect a wallet, construct an `eth_sendTransaction`, call a write selector (including via `eth_call`), sign, or change state.
+
+### Current owners
+
+All six `owner()` reads returned the same current address:
+
+| Network | `owner()` result | Status |
+|---|---|---|
+| Polygon | `0x15618583C06399c8EB2dDfbBd935892184368F8A` | VERIFIED by `eth_call` |
+| Arbitrum One | `0x15618583C06399c8EB2dDfbBd935892184368F8A` | VERIFIED by `eth_call` |
+| Base | `0x15618583C06399c8EB2dDfbBd935892184368F8A` | VERIFIED by `eth_call` |
+| Optimism | `0x15618583C06399c8EB2dDfbBd935892184368F8A` | VERIFIED by `eth_call` |
+| Avalanche | `0x15618583C06399c8EB2dDfbBd935892184368F8A` | VERIFIED by `eth_call` |
+| BNB Smart Chain | `0x15618583C06399c8EB2dDfbBd935892184368F8A` | VERIFIED by `eth_call`; source remains pending |
+
+The owner is the same across all six chains at the queried `latest` blocks. The two-step Chainlink `ConfirmedOwnerWithProposal` ownership mechanism is source/ABI verified for Polygon and supported by the common ownership selectors on the other runtimes. No current pending-owner value was read because no public getter is exposed in the audited ABI.
+
+### Selector and getter results
+
+For Polygon, Arbitrum, Base, Optimism, and Avalanche, every one of the following getter `eth_call`s succeeded: `owner`, `lastRequestId`, `s_subscriptionId`, `keyHash`, `callbackGasLimit`, `requestConfirmations`, `numWords`, and `payWithNative`. All returned `lastRequestId = 0`, `requestConfirmations = 3`, `numWords = 1`, and `payWithNative = true` at the queried blocks. Callback gas is 1,000,000 on Polygon and 500,000 on the other four.
+
+`eth_getCode` for each of those five runtimes contains the dispatcher selectors below. To honor the read-only audit rule, no write selector was executed or simulated:
+
+| Function | Selector | Polygon | Arbitrum | Base | Optimism | Avalanche |
+|---|---|---:|---:|---:|---:|---:|
+| `solicitarSorteio()` | `0x9b61bfea` | present | present | present | present | present |
+| `simularSorteioManual(uint256)` | `0x35e0388b` | present | present | present | present | present |
+| `owner()` | `0x8da5cb5b` | call succeeded | call succeeded | call succeeded | call succeeded | call succeeded |
+| `transferOwnership(address)` | `0xf2fde38b` | present | present | present | present | present |
+| `acceptOwnership()` | `0x79ba5097` | present | present | present | present | present |
+| `lastRequestId()` | `0xfc2a88c3` | call succeeded | call succeeded | call succeeded | call succeeded | call succeeded |
+| `s_subscriptionId()` | `0x8ac00021` | call succeeded | call succeeded | call succeeded | call succeeded | call succeeded |
+| `keyHash()` | `0x61728f39` | call succeeded | call succeeded | call succeeded | call succeeded | call succeeded |
+| `callbackGasLimit()` | `0x24f74697` | call succeeded | call succeeded | call succeeded | call succeeded | call succeeded |
+| `requestConfirmations()` | `0xb0fb162f` | call succeeded | call succeeded | call succeeded | call succeeded | call succeeded |
+| `numWords()` | `0x7ccfd7fc` | call succeeded | call succeeded | call succeeded | call succeeded | call succeeded |
+| `payWithNative()` | `0x38b28e1d` | call succeeded | call succeeded | call succeeded | call succeeded | call succeeded |
+
+Bytecode selector presence plus successful read calls verifies the public runtime surface, but it is not a compiler metadata/source-byte-for-byte comparison. Therefore Arbitrum, Base, Optimism, and Avalanche remain **LIKELY MATCH**, not `MATCH VERIFIED`; Polygon remains `MATCH VERIFIED` through its explorer’s exact-source verification.
+
+BNB returns the same owner and has non-empty code containing the complete selector set above. This is valuable runtime ABI evidence, but no reproducible verified source/creation artifact was recovered, so BNB remains **VERIFICATION PENDING** and is not assumed to share the five-source business logic.
+

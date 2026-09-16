@@ -92,3 +92,5 @@ Until then, **no network is approved for unattended draw initiation**, and no re
 
 The five recovered Solidity files were subsequently supplied as audit input (SHA-256 values are recorded in [contract-source-comparison.md](contract-source-comparison.md)). They establish the source-level draw behavior and the absence of a source-level pending-request or ticket-snapshot lock. Polygon additionally has an explorer **exact-source/runtime** verification and its deployed ABI exposes the corresponding selectors. The other four are classified separately according to their reproducible deployment evidence; BNB remains excluded.
 
+Follow-up public-RPC `eth_call` verifies the same current owner on Polygon, Arbitrum, Base, Optimism, Avalanche, and BNB: `0x15618583C06399c8EB2dDfbBd935892184368F8A`. The five recovered deployments support all audited VRF/ownership getters and the runtime dispatcher bytes for normal draw, manual contingency, and two-step ownership functions. No write selector was called or simulated. See the exact selector table and limitations in [contract-source-comparison.md](contract-source-comparison.md).
+
