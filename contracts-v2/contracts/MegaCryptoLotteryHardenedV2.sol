@@ -16,6 +16,7 @@ contract MegaCryptoLotteryHardenedV2 is IAutomationCompatible {
     uint256 public constant MIGRATION_DELAY = 7 days;
     uint256 public constant CONFIG_DELAY = 2 days;
     uint256 public constant VRF_TIMEOUT = 3 days;
+    uint256 public constant MAX_SETTLEMENT_BATCH = 200;
     bytes4 public constant MIGRATION_MAGIC = bytes4(keccak256("MegaCryptoLotteryMigrationReceiverV2"));
 
     enum RoundState { OPEN, CLOSED, VRF_REQUESTED, VRF_RECEIVED, SETTLEMENT, COMPLETED, EMERGENCY }
@@ -67,6 +68,7 @@ contract MegaCryptoLotteryHardenedV2 is IAutomationCompatible {
     uint256 public jackpotReserve;
     uint256 public maintenanceReserve;
     uint256 public oracleReserve;
+    uint256 public unallocatedDustReserve;
     uint256 public playerLiabilities;
     uint256 public configVersion;
     mapping(uint256 => Round) public rounds;
@@ -88,7 +90,7 @@ contract MegaCryptoLotteryHardenedV2 is IAutomationCompatible {
     event RandomnessRequested(uint256 indexed roundId, uint256 indexed requestId, address coordinator, uint256 configVersion);
     event RandomnessFulfilled(uint256 indexed roundId, uint256 indexed requestId, uint32 winningMask);
     event SettlementProgress(uint256 indexed roundId, uint256 cursor, uint8 bestScore, uint256 finalists);
-    event RoundSettled(uint256 indexed roundId, uint32 winningMask, uint8 bestScore, uint256 finalistCount, uint256 jackpotRollover);
+    event RoundSettled(uint256 indexed roundId, uint32 winningMask, uint8 bestScore, uint256 finalistCount, uint256 totalAward, uint256 dustToJackpot, uint256 jackpotRollover);
     event PrizeAllocated(uint256 indexed roundId, uint256 indexed ticketIndex, address indexed player, uint256 amount, bool jackpotPrize);
     event PrizeClaimed(uint256 indexed roundId, uint256 indexed ticketIndex, address indexed player, uint256 amount);
     event ManualContingencyExecuted(uint256 indexed roundId, uint256 indexed originalRequestId, bytes32 reasonHash, bytes32 evidenceHash, address actor);
@@ -131,13 +133,23 @@ contract MegaCryptoLotteryHardenedV2 is IAutomationCompatible {
         require(migrationState == MigrationState.NORMAL && r.state == RoundState.OPEN, "SALES_CLOSED");
         require(block.timestamp < r.cutoffAt, "CUTOFF");
         require(_isValidTicketMask(numberMask), "INVALID_TICKET");
+        // Reject deflationary/fee-on-transfer ticket tokens: accounting is denominated in
+        // the exact raw USDT amount actually received, never in a nominal transfer amount.
+        uint256 beforeBalance = usdt.balanceOf(address(this));
         usdt.safeTransferFrom(msg.sender, address(this), r.ticketPrice);
+        require(usdt.balanceOf(address(this)) == beforeBalance + r.ticketPrice, "UNSUPPORTED_TOKEN_BEHAVIOR");
         uint256 paid = r.ticketPrice;
-        r.jackpotContribution += paid * JACKPOT_BPS / BPS;
-        r.weeklyPool += paid * WEEKLY_BPS / BPS;
-        jackpotReserve += paid * JACKPOT_BPS / BPS;
-        maintenanceReserve += paid * MAINTENANCE_BPS / BPS;
-        oracleReserve += paid * ORACLE_BPS / BPS;
+        uint256 jackpotShare = paid * JACKPOT_BPS / BPS;
+        uint256 weeklyShare = paid * WEEKLY_BPS / BPS;
+        uint256 maintenanceShare = paid * MAINTENANCE_BPS / BPS;
+        uint256 oracleShare = paid * ORACLE_BPS / BPS;
+        uint256 ticketDust = paid - jackpotShare - weeklyShare - maintenanceShare - oracleShare;
+        r.jackpotContribution += jackpotShare;
+        r.weeklyPool += weeklyShare;
+        jackpotReserve += jackpotShare;
+        maintenanceReserve += maintenanceShare;
+        oracleReserve += oracleShare;
+        unallocatedDustReserve += ticketDust;
         uint256 ticketIndex = nextTicketIndex++;
         tickets[ticketIndex] = Ticket(msg.sender, numberMask);
         r.ticketCount++;
@@ -174,7 +186,7 @@ contract MegaCryptoLotteryHardenedV2 is IAutomationCompatible {
         require(roundId == currentRoundId && r.state == RoundState.OPEN && block.timestamp >= r.cutoffAt, "NOT_CLOSABLE");
         r.state = RoundState.CLOSED; r.closedAt = uint64(block.timestamp); r.ticketStart = uint64(nextTicketIndex - r.ticketCount);
         emit RoundClosed(roundId, r.ticketCount, r.cutoffAt);
-        if (r.ticketCount == 0) { r.state = RoundState.COMPLETED; r.completedAt = uint64(block.timestamp); emit RoundSettled(roundId, 0, 0, 0, jackpotReserve); }
+        if (r.ticketCount == 0) { r.state = RoundState.COMPLETED; r.completedAt = uint64(block.timestamp); emit RoundSettled(roundId, 0, 0, 0, 0, 0, jackpotReserve); }
     }
 
     function _requestRandomness(uint256 roundId) internal {
@@ -208,7 +220,7 @@ contract MegaCryptoLotteryHardenedV2 is IAutomationCompatible {
     function _processSettlement(uint256 roundId, uint256 maxTickets) internal {
         Round storage r = rounds[roundId];
         require(roundId == currentRoundId && (r.state == RoundState.VRF_RECEIVED || r.state == RoundState.SETTLEMENT), "NOT_SETTLING");
-        require(maxTickets > 0, "ZERO_BATCH"); r.state = RoundState.SETTLEMENT;
+        require(maxTickets > 0 && maxTickets <= MAX_SETTLEMENT_BATCH, "BAD_BATCH"); r.state = RoundState.SETTLEMENT;
         uint256 end = r.settlementCursor + maxTickets; if (end > r.ticketCount) end = r.ticketCount;
         for (uint256 offset = r.settlementCursor; offset < end; ++offset) {
             require(!ticketProcessed[roundId][offset], "DUPLICATE_TICKET"); ticketProcessed[roundId][offset] = true;
@@ -227,7 +239,7 @@ contract MegaCryptoLotteryHardenedV2 is IAutomationCompatible {
         uint256 dust = award - distributableAward;
         r.totalAward = distributableAward; r.weeklyPool = 0; playerLiabilities += distributableAward; jackpotReserve += dust;
         r.state = RoundState.COMPLETED; r.completedAt = uint64(block.timestamp);
-        emit RoundSettled(roundId, r.winningMask, r.bestScore, r.finalistCount, jackpotReserve);
+        emit RoundSettled(roundId, r.winningMask, r.bestScore, r.finalistCount, distributableAward, dust, jackpotReserve);
     }
 
     function claim(uint256 roundId, uint256 ticketOffset) external nonReentrant {
@@ -244,7 +256,9 @@ contract MegaCryptoLotteryHardenedV2 is IAutomationCompatible {
         Round storage r = rounds[roundId];
         require(r.state == RoundState.VRF_REQUESTED && r.requestId != 0 && block.timestamp >= r.requestedAt + VRF_TIMEOUT, "VRF_STILL_PROGRESSING");
         r.state = RoundState.EMERGENCY; r.requestPending = false; r.winningMask = _winningMask(uint256(keccak256(abi.encode(emergencyEntropy, reasonHash, evidenceHash, block.prevrandao, roundId))));
-        emit ManualContingencyExecuted(roundId, r.requestId, reasonHash, evidenceHash, msg.sender); emit RandomnessFulfilled(roundId, r.requestId, r.winningMask);
+        // No RandomnessFulfilled event is emitted for manual entropy: frontends can never
+        // mistake the contingency path for Chainlink VRF merely from the result log.
+        emit ManualContingencyExecuted(roundId, r.requestId, reasonHash, evidenceHash, msg.sender);
         r.state = RoundState.VRF_RECEIVED;
     }
 
@@ -265,7 +279,7 @@ contract MegaCryptoLotteryHardenedV2 is IAutomationCompatible {
         uint256 amount = migratableBalance(); usdt.safeTransfer(proposedSuccessor, amount); IMigrationReceiver(proposedSuccessor).receiveMigration(address(usdt), amount);
         migrationState = MigrationState.MIGRATED_CLAIMS_ONLY; emit MigrationExecuted(proposedSuccessor, amount, playerLiabilities);
     }
-    function protectedReserves() public view returns (uint256) { Round storage r = rounds[currentRoundId]; return jackpotReserve + maintenanceReserve + oracleReserve + r.weeklyPool; }
+    function protectedReserves() public view returns (uint256) { Round storage r = rounds[currentRoundId]; return jackpotReserve + maintenanceReserve + oracleReserve + unallocatedDustReserve + r.weeklyPool; }
     function migratableBalance() public view returns (uint256) { uint256 balance = usdt.balanceOf(address(this)); uint256 protected_ = playerLiabilities; return balance > protected_ ? balance - protected_ : 0; }
     function solvency() external view returns (uint256 balance, uint256 protected_, bool solvent) { balance = usdt.balanceOf(address(this)); protected_ = playerLiabilities + protectedReserves(); solvent = protected_ <= balance; }
 
