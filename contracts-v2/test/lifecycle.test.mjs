@@ -40,5 +40,9 @@ describe('MegaCryptoLotteryHardenedV2 lifecycle', function () {
     await advance(provider, 7 * 24 * 60 * 60 + 1); await assert.rejects(lottery.executeMigration()); // active OPEN round blocks migration
     assert.equal(await lottery.owner(), await owner.getAddress());
   });
+  it('rejects attacker-selected huge settlement batches without advancing state', async () => {
+    const { lottery, player, provider, vrf } = await fixture(); await (await lottery.connect(player).buyTicket(ticketMask())).wait(); await advance(provider, 7 * 24 * 60 * 60 + 1); await (await lottery.closeRound(1)).wait(); await (await lottery.requestRandomness(1)).wait(); await (await vrf.fulfill(1, 77n)).wait();
+    await assert.rejects(lottery.processSettlement(1, 201).then((tx) => tx.wait())); assert.equal((await lottery.rounds(1)).settlementCursor, 0n);
+  });
 });
 
