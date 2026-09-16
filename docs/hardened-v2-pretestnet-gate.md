@@ -23,9 +23,11 @@ Current npm registry versions queried on 2026-09-16:
 | `@chainlink/contracts` | `1.5.0` | Import `VRFConsumerBaseV2Plus`, `VRFV2PlusClient`, coordinator interface, and Automation interfaces rather than shipping local compatibility interfaces. |
 | `@openzeppelin/contracts` | `5.6.1` | Import audited `SafeERC20`, `ReentrancyGuard`, and `Ownable2Step`. |
 
-The package install could not complete in this Windows environment because npm attempted a child-process spawn and received `EPERM`. The exact recommended pins are recorded in [PRODUCTION_DEPENDENCIES.md](../contracts-v2/PRODUCTION_DEPENDENCIES.md), but are not yet imported by the local reference. **Replacing local compatibility code with the exact official imports, compiling it, and independently auditing the final bytecode is REQUIRED_BEFORE_TESTNET.**
+The Windows host has no installed WSL distribution or Docker runtime. npm's normal dependency installation still fails because the Chainlink package contains a Git dependency and the host blocks the child process/cache path with `EPERM`. As a reproducible local inspection workaround, the exact npm tarballs were fetched with a workspace-local cache and extracted only into ignored local `node_modules`; the official-import integration target now compiles. The exact recommended pins are recorded in [PRODUCTION_DEPENDENCIES.md](../contracts-v2/PRODUCTION_DEPENDENCIES.md), but are not yet imported by the full hardened state-machine reference. **Porting the entire state machine to exact official imports, compiling deployable bytecode, and independently auditing it are REQUIRED_BEFORE_TESTNET.**
 
 Chainlink’s current Automation guide confirms `checkUpkeep(bytes)` / `performUpkeep(bytes)` for custom logic, while also warning of Automation v1.x/v2.1 sunsets and migration toward CRE. Recheck official documentation, current supported networks, coordinator/subscription parameters, and the exact release API immediately before deployment.
+
+The current six-network decision is recorded in [chainlink-six-network-readiness.md](chainlink-six-network-readiness.md): Automation is optional liveness only, and CRE is not assumed to be an available substitute.
 
 ## Evidence and late-VRF behavior
 
