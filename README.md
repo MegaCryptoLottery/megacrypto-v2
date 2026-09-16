@@ -43,6 +43,8 @@ The read-only dashboard’s exact supported data, bounded-history limits, and in
 
 The independently evidenced deployment blocks, bounded `SorteioRealizado` scan design, mask semantics, and per-network Chainlink VRF audit are documented in [`docs/draw-history-vrf-audit.md`](docs/draw-history-vrf-audit.md).
 
+The read-only assessment of whether the existing deployments can safely support scheduled draw automation is documented in [`docs/draw-automation-audit.md`](docs/draw-automation-audit.md). It deliberately leaves unverified write access, timing, role, and subscription details unresolved rather than claiming an Automation integration is safe.
+
 ## Deployment verification gate
 
 The source records above are centralized in `src/config/chains.ts`. To enable a disabled network, obtain and audit its independent deployment evidence, then update that chain's registry entry:
