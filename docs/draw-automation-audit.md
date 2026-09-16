@@ -1,3 +1,4 @@
+
 # Draw automation audit (read-only)
 
 Audit date: 2026-09-15. Scope: the six deployed MegaCrypto Lottery contracts and their verified/public explorer artifacts. This audit did **not** send a transaction, sign a message, request VRF randomness, register an upkeep, or change any production code.
@@ -93,4 +94,12 @@ Until then, **no network is approved for unattended draw initiation**, and no re
 The five recovered Solidity files were subsequently supplied as audit input (SHA-256 values are recorded in [contract-source-comparison.md](contract-source-comparison.md)). They establish the source-level draw behavior and the absence of a source-level pending-request or ticket-snapshot lock. Polygon additionally has an explorer **exact-source/runtime** verification and its deployed ABI exposes the corresponding selectors. The other four are classified separately according to their reproducible deployment evidence; BNB remains excluded.
 
 Follow-up public-RPC `eth_call` verifies the same current owner on Polygon, Arbitrum, Base, Optimism, Avalanche, and BNB: `0x15618583C06399c8EB2dDfbBd935892184368F8A`. The five recovered deployments support all audited VRF/ownership getters and the runtime dispatcher bytes for normal draw, manual contingency, and two-step ownership functions. No write selector was called or simulated. See the exact selector table and limitations in [contract-source-comparison.md](contract-source-comparison.md).
+
+## Hardened V2 design recommendation (not implemented)
+
+The current deployed contracts should **not** be treated as safely autonomously drawable merely because the owner/VRF selectors are now read-only verified. The recovered-source/runtime audit shows missing round closure/snapshot, request-pending, request-to-round binding, on-chain weekly timing, and bounded callback settlement protections. An external owner keeper can improve operational liveness but cannot add those contract-enforced guarantees.
+
+[hardened-contract-v2-spec.md](hardened-contract-v2-spec.md) records the proposed future architecture: explicit immutable round snapshots; `OPEN → CLOSED → VRF_REQUESTED → COMPLETED` lifecycle with exceptional `EMERGENCY`; Chainlink Automation-compatible, idempotent progress functions; request ID to round binding; constant-cost VRF callback plus bounded, resumable settlement; claim-based allocation; and a timeout/evidence-gated manual contingency that cannot be passed off as VRF. It recommends a future audited, independently verified six-chain deployment rather than enabling unattended draws on the current contracts.
+
+This is documentation only. It neither deploys a contract nor changes the public frontend, production ABI, current ownership, Automation registration, VRF subscription, or any on-chain state.
 
