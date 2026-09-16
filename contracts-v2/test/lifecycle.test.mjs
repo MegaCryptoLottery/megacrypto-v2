@@ -24,6 +24,7 @@ describe('MegaCryptoLotteryHardenedV2 lifecycle', function () {
     const callback = await vrf.fulfill(1, 44n); const receipt = await callback.wait(); assert.ok(receipt.gasUsed < 200000n);
     const after = await lottery.rounds(1); assert.equal(after.state, 3n); assert.equal(after.settlementCursor, 0n); assert.equal(after.winningMask, BigInt(winningMask(44n)));
     assert.equal(after.drawMethod, 1n);
+    const evidence = await lottery.drawEvidence(1); assert.equal(evidence.method, 1n); assert.equal(evidence.requestId, 1n); assert.equal(evidence.winningMask, BigInt(winningMask(44n)));
   });
   it('settles in bounded batches and lets one wallet claim multiple winning tickets only once each', async () => {
     const { lottery, player, provider, vrf, token } = await fixture(); const mask = winningMask(99n);
@@ -31,6 +32,7 @@ describe('MegaCryptoLotteryHardenedV2 lifecycle', function () {
     await advance(provider, 7 * 24 * 60 * 60 + 1); await (await lottery.closeRound(1)).wait(); await (await lottery.requestRandomness(1)).wait(); await (await vrf.fulfill(1, 99n)).wait();
     await (await lottery.processSettlement(1, 1)).wait(); assert.equal((await lottery.rounds(1)).settlementCursor, 1n);
     await (await lottery.processSettlement(1, 1)).wait(); const completed = await lottery.rounds(1); assert.equal(completed.state, 5n); assert.equal(completed.finalistCount, 2n);
+    const entitlement = await lottery.ticketEntitlement(1, 0); assert.equal(entitlement.ticketOwner, await player.getAddress()); assert.equal(entitlement.winning, true); assert.equal(entitlement.claimableAmount, completed.totalAward / 2n); assert.equal(entitlement.claimed, false);
     const before = await token.balanceOf(await player.getAddress()); await (await lottery.connect(player).claim(1, 0)).wait(); await (await lottery.connect(player).claim(1, 1)).wait(); assert.ok((await token.balanceOf(await player.getAddress())) > before);
     await assert.rejects(lottery.connect(player).claim(1, 0));
   });
