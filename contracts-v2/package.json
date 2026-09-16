@@ -4,6 +4,7 @@
   "type": "module",
   "scripts": {
     "compile": "node scripts/compile.mjs",
+    "compile:production": "node scripts/compile-production-candidate.mjs",
     "test": "mocha --timeout 120000 test/**/*.test.mjs",
     "test:gas": "mocha --timeout 120000 test/gas.test.mjs",
     "test:invariant": "mocha --timeout 120000 test/invariant.test.mjs",
