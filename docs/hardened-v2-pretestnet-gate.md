@@ -6,6 +6,8 @@ Audit date: 2026-09-16. Scope: local source and mock testing only. This is not d
 
 **TESTNET BLOCKED.** There are no unresolved Critical findings in the local reference, but the unresolved High requirements below prevent a safe recommendation for public testnet use.
 
+The official-import candidate record is [hardened-v2-production-candidate.md](hardened-v2-production-candidate.md). Its coordinator-immutability finding means a future coordinator change must use migration unless an official, audited router architecture is adopted.
+
 ## Fixed in this gate
 
 1. The local VRF v2.5 request encoding was incorrect: `extraArgs` had been a raw ABI boolean. The local compatibility helper now uses the canonical v2.5 `EXTRA_ARGS_V1_TAG` / `ExtraArgsV1({nativePayment})` encoding.
@@ -38,7 +40,7 @@ playerLiabilities + jackpotReserve + activeRound.weeklyPool
   + maintenanceReserve + oracleReserve + unallocatedDustReserve <= tokenBalance
 ```
 
-Per-ticket percentage dust and equal-winner allocation dust are explicitly tracked. Existing local tests verify solvency over randomized single-round variants, claims, and migration gating. A dynamic multi-round migration-with-outstanding-liabilities suite, malicious successor suite, and historical post-migration-claim suite remain incomplete. **These are High test gaps and BLOCK TESTNET.**
+Per-ticket percentage dust and equal-winner allocation dust are explicitly tracked. Existing local tests verify solvency over randomized single-round variants, claims, migration gating, and one completed-round migration with an unclaimed historical jackpot liability that remains claimable after migration. A 100-run dynamic multi-round migration-with-outstanding-liabilities suite, malicious successor suite, and comprehensive historical post-migration-claim suite remain incomplete. **These are High test gaps and BLOCK TESTNET.**
 
 ## Large-scale and Automation liveness
 
@@ -56,7 +58,7 @@ Attempted command: `slither --version` on 2026-09-16. Result: unavailable (`slit
 |---|---|
 | Critical | None identified in local review |
 | High | Official-import compilation/audit; malicious token/coordinator/successor integration tests; dynamic multi-round liability migration; target-chain gas harness — **BLOCKS TESTNET** |
-| Medium | Explicit summary entitlement observability and comprehensive cutoff/config/migration state coverage incomplete — **BLOCKS TESTNET** |
+| Medium | Comprehensive cutoff/config/migration state coverage incomplete — **BLOCKS TESTNET** |
 | Low | Add detailed per-round manual evidence getter and operational dashboards |
 | Informational | Timestamp tolerance and manual emergency entropy remain governance/trust risks |
 
