@@ -1,4 +1,3 @@
-
 # Draw automation audit (read-only)
 
 Audit date: 2026-09-15. Scope: the six deployed MegaCrypto Lottery contracts and their verified/public explorer artifacts. This audit did **not** send a transaction, sign a message, request VRF randomness, register an upkeep, or change any production code.
