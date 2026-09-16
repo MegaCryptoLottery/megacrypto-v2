@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
-import {IERC20Like, SafeERC20, IVRFV2PlusCoordinator, IAutomationCompatible, IMigrationReceiver} from "./Interfaces.sol";
+import {IERC20Like, SafeERC20, IVRFV2PlusCoordinator, VRFV2PlusClientCompat, IAutomationCompatible, IMigrationReceiver} from "./Interfaces.sol";
 
 /// @notice Local-development reference implementation. No deployment configuration is included.
 contract MegaCryptoLotteryHardenedV2 is IAutomationCompatible {
@@ -22,6 +22,7 @@ contract MegaCryptoLotteryHardenedV2 is IAutomationCompatible {
     enum RoundState { OPEN, CLOSED, VRF_REQUESTED, VRF_RECEIVED, SETTLEMENT, COMPLETED, EMERGENCY }
     enum MigrationState { NORMAL, MIGRATION_PROPOSED, MIGRATION_READY, MIGRATED_CLAIMS_ONLY }
     enum Action { CLOSE, REQUEST, SETTLE, OPEN_NEXT }
+    enum DrawMethod { NONE, CHAINLINK_VRF, MANUAL_CONTINGENCY }
 
     struct VrfConfig {
         address coordinator;
@@ -48,6 +49,7 @@ contract MegaCryptoLotteryHardenedV2 is IAutomationCompatible {
         uint32 winningMask;
         uint256 requestId;
         bool requestPending;
+        DrawMethod drawMethod;
         uint256 weeklyPool;
         uint256 jackpotContribution;
         uint256 totalAward;
@@ -89,6 +91,7 @@ contract MegaCryptoLotteryHardenedV2 is IAutomationCompatible {
     event RoundClosed(uint256 indexed roundId, uint256 ticketCount, uint256 cutoffAt);
     event RandomnessRequested(uint256 indexed roundId, uint256 indexed requestId, address coordinator, uint256 configVersion);
     event RandomnessFulfilled(uint256 indexed roundId, uint256 indexed requestId, uint32 winningMask);
+    event DrawMethodRecorded(uint256 indexed roundId, DrawMethod method, uint256 indexed requestId, uint32 winningMask);
     event SettlementProgress(uint256 indexed roundId, uint256 cursor, uint8 bestScore, uint256 finalists);
     event RoundSettled(uint256 indexed roundId, uint32 winningMask, uint8 bestScore, uint256 finalistCount, uint256 totalAward, uint256 dustToJackpot, uint256 jackpotRollover);
     event PrizeAllocated(uint256 indexed roundId, uint256 indexed ticketIndex, address indexed player, uint256 amount, bool jackpotPrize);
@@ -201,7 +204,7 @@ contract MegaCryptoLotteryHardenedV2 is IAutomationCompatible {
         request.requestConfirmations = c.requestConfirmations;
         request.callbackGasLimit = c.callbackGasLimit;
         request.numWords = c.numWords;
-        request.extraArgs = abi.encode(c.payWithNative);
+        request.extraArgs = VRFV2PlusClientCompat.argsToBytes(VRFV2PlusClientCompat.ExtraArgsV1({nativePayment: c.payWithNative}));
         uint256 requestId = IVRFV2PlusCoordinator(c.coordinator).requestRandomWords(request);
         require(requestId != 0 && requestIdToRoundId[requestId] == 0, "BAD_REQUEST_ID");
         r.requestId = requestId; requestIdToRoundId[requestId] = roundId;
@@ -212,9 +215,10 @@ contract MegaCryptoLotteryHardenedV2 is IAutomationCompatible {
         uint256 roundId = requestIdToRoundId[requestId];
         require(roundId != 0 && words.length > 0, "UNKNOWN_REQUEST");
         Round storage r = rounds[roundId]; VrfConfig storage c = vrfConfigs[r.configVersion];
-        require(msg.sender == c.coordinator && r.state == RoundState.VRF_REQUESTED && r.requestId == requestId, "INVALID_CALLBACK");
-        r.winningMask = _winningMask(words[0]); r.requestPending = false; r.state = RoundState.VRF_RECEIVED;
+        require(msg.sender == c.coordinator && r.state == RoundState.VRF_REQUESTED && r.requestId == requestId && r.drawMethod == DrawMethod.NONE, "INVALID_CALLBACK");
+        r.winningMask = _winningMask(words[0]); r.requestPending = false; r.drawMethod = DrawMethod.CHAINLINK_VRF; r.state = RoundState.VRF_RECEIVED;
         emit RandomnessFulfilled(roundId, requestId, r.winningMask);
+        emit DrawMethodRecorded(roundId, DrawMethod.CHAINLINK_VRF, requestId, r.winningMask);
     }
 
     function _processSettlement(uint256 roundId, uint256 maxTickets) internal {
@@ -254,11 +258,12 @@ contract MegaCryptoLotteryHardenedV2 is IAutomationCompatible {
 
     function executeManualContingency(uint256 roundId, uint256 emergencyEntropy, bytes32 reasonHash, bytes32 evidenceHash) external onlyEmergency nonReentrant {
         Round storage r = rounds[roundId];
-        require(r.state == RoundState.VRF_REQUESTED && r.requestId != 0 && block.timestamp >= r.requestedAt + VRF_TIMEOUT, "VRF_STILL_PROGRESSING");
-        r.state = RoundState.EMERGENCY; r.requestPending = false; r.winningMask = _winningMask(uint256(keccak256(abi.encode(emergencyEntropy, reasonHash, evidenceHash, block.prevrandao, roundId))));
+        require(r.state == RoundState.VRF_REQUESTED && r.requestId != 0 && r.drawMethod == DrawMethod.NONE && block.timestamp >= r.requestedAt + VRF_TIMEOUT, "VRF_STILL_PROGRESSING");
+        r.state = RoundState.EMERGENCY; r.requestPending = false; r.drawMethod = DrawMethod.MANUAL_CONTINGENCY; r.winningMask = _winningMask(uint256(keccak256(abi.encode(emergencyEntropy, reasonHash, evidenceHash, block.prevrandao, roundId))));
         // No RandomnessFulfilled event is emitted for manual entropy: frontends can never
         // mistake the contingency path for Chainlink VRF merely from the result log.
         emit ManualContingencyExecuted(roundId, r.requestId, reasonHash, evidenceHash, msg.sender);
+        emit DrawMethodRecorded(roundId, DrawMethod.MANUAL_CONTINGENCY, r.requestId, r.winningMask);
         r.state = RoundState.VRF_RECEIVED;
     }
 
@@ -282,6 +287,9 @@ contract MegaCryptoLotteryHardenedV2 is IAutomationCompatible {
     function protectedReserves() public view returns (uint256) { Round storage r = rounds[currentRoundId]; return jackpotReserve + maintenanceReserve + oracleReserve + unallocatedDustReserve + r.weeklyPool; }
     function migratableBalance() public view returns (uint256) { uint256 balance = usdt.balanceOf(address(this)); uint256 protected_ = playerLiabilities; return balance > protected_ ? balance - protected_ : 0; }
     function solvency() external view returns (uint256 balance, uint256 protected_, bool solvent) { balance = usdt.balanceOf(address(this)); protected_ = playerLiabilities + protectedReserves(); solvent = protected_ <= balance; }
+    function drawEvidence(uint256 roundId) external view returns (DrawMethod method, uint32 winningMask, uint256 requestId, address coordinator, uint256 vrfConfigVersion, uint256 requestedAt, uint256 completedAt) {
+        Round storage r = rounds[roundId]; method = r.drawMethod; winningMask = r.winningMask; requestId = r.requestId; coordinator = vrfConfigs[r.configVersion].coordinator; vrfConfigVersion = r.configVersion; requestedAt = r.requestedAt; completedAt = r.completedAt;
+    }
 
     function _openNextRound() internal { require(rounds[currentRoundId].state == RoundState.COMPLETED && migrationState == MigrationState.NORMAL, "NOT_OPENABLE"); _openRound(rounds[currentRoundId].ticketPrice); }
     function _openRound(uint128 ticketPrice_) internal { currentRoundId++; Round storage r = rounds[currentRoundId]; r.state = RoundState.OPEN; r.openedAt = uint64(block.timestamp); r.cutoffAt = uint64(block.timestamp + roundDuration); r.ticketPrice = ticketPrice_; r.configVersion = configVersion; emit RoundOpened(currentRoundId, r.cutoffAt, ticketPrice_, address(usdt), configVersion); }
