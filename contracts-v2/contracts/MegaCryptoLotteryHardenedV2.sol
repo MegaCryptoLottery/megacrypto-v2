@@ -50,6 +50,8 @@ contract MegaCryptoLotteryHardenedV2 is IAutomationCompatible {
         uint256 requestId;
         bool requestPending;
         DrawMethod drawMethod;
+        bytes32 manualReasonHash;
+        bytes32 manualEvidenceHash;
         uint256 weeklyPool;
         uint256 jackpotContribution;
         uint256 totalAward;
@@ -259,7 +261,7 @@ contract MegaCryptoLotteryHardenedV2 is IAutomationCompatible {
     function executeManualContingency(uint256 roundId, uint256 emergencyEntropy, bytes32 reasonHash, bytes32 evidenceHash) external onlyEmergency nonReentrant {
         Round storage r = rounds[roundId];
         require(r.state == RoundState.VRF_REQUESTED && r.requestId != 0 && r.drawMethod == DrawMethod.NONE && block.timestamp >= r.requestedAt + VRF_TIMEOUT, "VRF_STILL_PROGRESSING");
-        r.state = RoundState.EMERGENCY; r.requestPending = false; r.drawMethod = DrawMethod.MANUAL_CONTINGENCY; r.winningMask = _winningMask(uint256(keccak256(abi.encode(emergencyEntropy, reasonHash, evidenceHash, block.prevrandao, roundId))));
+        r.state = RoundState.EMERGENCY; r.requestPending = false; r.drawMethod = DrawMethod.MANUAL_CONTINGENCY; r.manualReasonHash = reasonHash; r.manualEvidenceHash = evidenceHash; r.winningMask = _winningMask(uint256(keccak256(abi.encode(emergencyEntropy, reasonHash, evidenceHash, block.prevrandao, roundId))));
         // No RandomnessFulfilled event is emitted for manual entropy: frontends can never
         // mistake the contingency path for Chainlink VRF merely from the result log.
         emit ManualContingencyExecuted(roundId, r.requestId, reasonHash, evidenceHash, msg.sender);
@@ -287,8 +289,11 @@ contract MegaCryptoLotteryHardenedV2 is IAutomationCompatible {
     function protectedReserves() public view returns (uint256) { Round storage r = rounds[currentRoundId]; return jackpotReserve + maintenanceReserve + oracleReserve + unallocatedDustReserve + r.weeklyPool; }
     function migratableBalance() public view returns (uint256) { uint256 balance = usdt.balanceOf(address(this)); uint256 protected_ = playerLiabilities; return balance > protected_ ? balance - protected_ : 0; }
     function solvency() external view returns (uint256 balance, uint256 protected_, bool solvent) { balance = usdt.balanceOf(address(this)); protected_ = playerLiabilities + protectedReserves(); solvent = protected_ <= balance; }
-    function drawEvidence(uint256 roundId) external view returns (DrawMethod method, uint32 winningMask, uint256 requestId, address coordinator, uint256 vrfConfigVersion, uint256 requestedAt, uint256 completedAt) {
-        Round storage r = rounds[roundId]; method = r.drawMethod; winningMask = r.winningMask; requestId = r.requestId; coordinator = vrfConfigs[r.configVersion].coordinator; vrfConfigVersion = r.configVersion; requestedAt = r.requestedAt; completedAt = r.completedAt;
+    function drawEvidence(uint256 roundId) external view returns (DrawMethod method, uint32 winningMask, uint256 requestId, address coordinator, uint256 vrfConfigVersion, uint256 requestedAt, uint256 completedAt, uint8 bestScore, uint256 finalistCount, uint256 totalAward, bytes32 manualReasonHash, bytes32 manualEvidenceHash) {
+        Round storage r = rounds[roundId]; method = r.drawMethod; winningMask = r.winningMask; requestId = r.requestId; coordinator = vrfConfigs[r.configVersion].coordinator; vrfConfigVersion = r.configVersion; requestedAt = r.requestedAt; completedAt = r.completedAt; bestScore = r.bestScore; finalistCount = r.finalistCount; totalAward = r.totalAward; manualReasonHash = r.manualReasonHash; manualEvidenceHash = r.manualEvidenceHash;
+    }
+    function ticketEntitlement(uint256 roundId, uint256 ticketOffset) external view returns (address ticketOwner, uint32 ticketMask, uint8 score, bool winning, uint256 claimableAmount, bool claimed) {
+        Round storage r = rounds[roundId]; require(ticketOffset < r.ticketCount, "TICKET_OFFSET"); Ticket storage t = tickets[uint256(r.ticketStart) + ticketOffset]; ticketOwner = t.player; ticketMask = t.mask; score = _popcount(t.mask & r.winningMask); winning = r.state == RoundState.COMPLETED && score == r.bestScore && r.totalAward > 0; claimed = ticketClaimed[roundId][ticketOffset]; claimableAmount = winning && !claimed ? r.totalAward / r.finalistCount : 0;
     }
 
     function _openNextRound() internal { require(rounds[currentRoundId].state == RoundState.COMPLETED && migrationState == MigrationState.NORMAL, "NOT_OPENABLE"); _openRound(rounds[currentRoundId].ticketPrice); }
