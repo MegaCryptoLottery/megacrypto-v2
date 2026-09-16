@@ -16,18 +16,17 @@ import {AutomationCompatibleInterface} from "@chainlink/contracts/src/v0.8/autom
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
-import {Ownable2Step} from "@openzeppelin/contracts/access/Ownable2Step.sol";
-import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
 /// @notice Import/API verification target for the final audited implementation.
-/// @dev The actual state machine remains in the local reference pending a clean
-///      official-dependency build and independent review. The coordinator is
-///      immutable in VRFConsumerBaseV2Plus; changing coordinators requires a
-///      successor migration, not a mutable config setter.
+/// @dev The actual state machine remains in the local reference pending a full
+///      official-dependency port and independent review. VRFConsumerBaseV2Plus
+///      already inherits Chainlink ConfirmedOwner (two-step ownership); it
+///      cannot safely be combined with OpenZeppelin Ownable2Step because both
+///      define the ownership surface. Use the Chainlink base ownership surface
+///      for this consumer and SafeERC20/ReentrancyGuard from OpenZeppelin.
 abstract contract MegaCryptoLotteryV2ProductionCandidate is
     VRFConsumerBaseV2Plus,
     AutomationCompatibleInterface,
-    Ownable2Step,
     ReentrancyGuard
 {
     using SafeERC20 for IERC20;
@@ -37,10 +36,11 @@ abstract contract MegaCryptoLotteryV2ProductionCandidate is
 
     constructor(address usdt, address coordinator, address initialOwner)
         VRFConsumerBaseV2Plus(coordinator)
-        Ownable(initialOwner)
     {
+        require(usdt != address(0) && initialOwner != address(0), "ZERO_ADDRESS");
         i_usdt = IERC20(usdt);
         i_vrfCoordinator = IVRFCoordinatorV2Plus(coordinator);
+        if (initialOwner != msg.sender) transferOwnership(initialOwner);
     }
 
     function checkUpkeep(bytes calldata) external view virtual override returns (bool, bytes memory);
