@@ -15,7 +15,7 @@ const input = {
   sources: { 'MegaCryptoLotteryV2ProductionCandidate.sol': { content: fs.readFileSync(entry, 'utf8') } },
   settings: {
     evmVersion: 'shanghai', viaIR: true, optimizer: { enabled: true, runs: 200 },
-    outputSelection: { '*': { '*': ['abi', 'evm.bytecode.object'] } },
+    outputSelection: { '*': { '*': ['abi', 'evm.bytecode.object', 'evm.deployedBytecode.object'] } },
   },
 };
 const output = JSON.parse(solc.compile(JSON.stringify(input), { import: resolveImport }));
