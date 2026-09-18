@@ -11,14 +11,16 @@ contract OfficialVrfCoordinatorMock {
     uint256 public nextRequestId = 1;
     bool public revertRequests;
     bool public returnZero;
+    uint256 public forcedRequestId;
     mapping(uint256 => address) public consumerForRequest;
     bytes public lastExtraArgs;
     function setFailureMode(bool revert_, bool zero_) external { revertRequests = revert_; returnZero = zero_; }
+    function setForcedRequestId(uint256 id) external { forcedRequestId = id; }
     function requestRandomWords(RandomWordsRequest calldata request) external returns (uint256 requestId) {
         require(!revertRequests, "REQUEST_REVERT");
         lastExtraArgs = request.extraArgs;
         if (returnZero) return 0;
-        requestId = nextRequestId++;
+        requestId = forcedRequestId == 0 ? nextRequestId++ : forcedRequestId;
         consumerForRequest[requestId] = msg.sender;
     }
     function fulfill(uint256 requestId, uint256 word) external {
