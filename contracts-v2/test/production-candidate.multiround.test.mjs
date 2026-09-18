@@ -9,6 +9,13 @@ const candidateArtifact = production['MegaCryptoLotteryV2ProductionCandidate.sol
 const coordinatorArtifact = production['mocks/OfficialVrfCoordinatorMock.sol'].OfficialVrfCoordinatorMock;
 const WEEK = 7 * 24 * 60 * 60;
 const PRICE = (decimals) => 5n * 10n ** BigInt(decimals);
+const shardFlag = process.argv.indexOf('--shard');
+// npm on Windows may consume the literal --shard flag but preserve its numeric
+// value as the final argument; retain the documented npm invocation as well.
+const trailingShard = /^\d$/.test(process.argv.at(-1) ?? '') ? Number(process.argv.at(-1)) : null;
+const shard = shardFlag >= 0 ? Number(process.argv[shardFlag + 1]) : trailingShard;
+const matricesOnly = process.argv.includes('--matrices-only');
+if (shard !== null && (!Number.isInteger(shard) || shard < 0 || shard > 9)) throw new Error('Shard must be an integer from 0 to 9');
 
 class AccountingOracle {
   constructor(price) { this.price = price; this.jackpot = 0n; this.weekly = 0n; this.maintenance = 0n; this.oracle = 0n; this.dust = 0n; this.liabilities = 0n; this.balance = 0n; }
@@ -88,10 +95,13 @@ async function completeRound(ctx, entries, word, { claims = [] } = {}) {
 describe('production candidate multi-round independent accounting gate', function () {
   this.timeout(900000);
 
-  it('completes 100 seeded five-round campaigns across 6- and 18-decimal tokens with independent accounting', async () => {
+  it(matricesOnly ? 'skips campaigns for the matrix-only gate pass' : 'completes deterministic seeded campaigns across 6- and 18-decimal tokens with independent accounting', async function () {
+    if (matricesOnly) this.skip();
     const started = Date.now(); const stats = { campaigns: 0, rounds: 0, tickets: 0, comparisons: 0, six: 0, eighteen: 0 };
     const contexts = [await fixture(6), await fixture(18)];
-    for (let campaign = 0; campaign < 100; campaign++) {
+    const firstCampaign = shard === null ? 0 : shard * 10;
+    const campaignCount = shard === null ? 100 : 10;
+    for (let campaign = firstCampaign; campaign < firstCampaign + campaignCount; campaign++) {
       const ctx = contexts[campaign % 2]; const next = rng(0xC0FFEE ^ campaign); if (campaign % 2) stats.eighteen++; else stats.six++;
       for (let step = 0; step < 5; step++) {
         const word = BigInt(next()); const winner = winningMask(word); const variant = next() % 5;
@@ -107,11 +117,12 @@ describe('production candidate multi-round independent accounting gate', functio
         stats.campaigns += step === 4 ? 1 : 0; stats.rounds++; stats.tickets += entries.length; stats.comparisons += entries.length + 3;
       }
     }
-    assert.equal(stats.campaigns, 100); assert.equal(stats.rounds, 500); assert.ok(stats.tickets > 0); assert.equal(stats.six, 50); assert.equal(stats.eighteen, 50);
-    console.log(`MULTIROUND_STATS campaigns=${stats.campaigns} rounds=${stats.rounds} tickets=${stats.tickets} comparisons=${stats.comparisons} seed=0xC0FFEE elapsedMs=${Date.now() - started}`);
+    assert.equal(stats.campaigns, campaignCount); assert.equal(stats.rounds, campaignCount * 5); assert.ok(stats.tickets > 0); assert.equal(stats.six, campaignCount / 2); assert.equal(stats.eighteen, campaignCount / 2);
+    if (shard === null) console.log(`MULTIROUND_STATS campaigns=${stats.campaigns} rounds=${stats.rounds} tickets=${stats.tickets} comparisons=${stats.comparisons} seed=0xC0FFEE elapsedMs=${Date.now() - started}`);
+    else console.log(`MULTIROUND_SHARD_STATS shard=${shard} seed=0x${(0xC0FFEE ^ firstCampaign).toString(16)} campaigns=${stats.campaigns} rounds=${stats.rounds} tickets=${stats.tickets} accountingComparisons=${stats.comparisons} decimalsCoverage=6,18 elapsedMs=${Date.now() - started}`);
   });
 
-  it('handles exact jackpot rollover and one, two, and ten winner allocations independently', async () => {
+  (shard === null || matricesOnly ? it : it.skip)('handles exact jackpot rollover and one, two, and ten winner allocations independently', async () => {
     for (const finalists of [1, 2, 10]) {
       const ctx = await fixture(6); const word = 77n; const winner = winningMask(word);
       for (let i = 0; i < 10; i++) { await completeRound(ctx, [{ signer: ctx.signers[1], mask: exactScoreMask(winner, 14) }], word); assert.equal(await ctx.lottery.jackpotReserve(), BigInt(i + 1) * PRICE(6) * 5000n / 10000n, 'rollover after each non-jackpot round'); }
@@ -121,7 +132,7 @@ describe('production candidate multi-round independent accounting gate', functio
     }
   });
 
-  it('allocates weekly prizes for one, tied, and same-wallet multiple winners', async () => {
+  (shard === null || matricesOnly ? it : it.skip)('allocates weekly prizes for one, tied, and same-wallet multiple winners', async () => {
     const ctx = await fixture(18); const word = 123n; const winner = winningMask(word);
     for (const entries of [
       [{ signer: ctx.signers[1], mask: exactScoreMask(winner, 14) }],
@@ -130,7 +141,7 @@ describe('production candidate multi-round independent accounting gate', functio
     ]) { const result = await completeRound(ctx, entries, word); assert.equal(result.winners.length, entries.length); assert.equal(result.perWinner * BigInt(entries.length), result.award); }
   });
 
-  it('preserves historical unclaimed claims through later rounds and rejects duplicate claims', async () => {
+  (shard === null || matricesOnly ? it : it.skip)('preserves historical unclaimed claims through later rounds and rejects duplicate claims', async () => {
     const ctx = await fixture(6); const word = 456n; const winner = winningMask(word);
     const first = await completeRound(ctx, [{ signer: ctx.signers[1], mask: exactScoreMask(winner, 14) }], word);
     const second = await completeRound(ctx, [{ signer: ctx.signers[1], mask: winner }, { signer: ctx.signers[2], mask: winner }], word);
