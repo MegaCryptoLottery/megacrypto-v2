@@ -65,3 +65,61 @@ The wider adversarial gate remains incomplete: migration-liability,
 hostile-successor, complete pause/emergency, and other required suites must
 still pass before the overall production-candidate adversarial gate can pass.
 
+## Migration liabilities gate — PASS (local Ganache)
+
+The migration-liability suite uses the exact production candidate, a standard
+local ERC-20, the local ABI-compatible VRF coordinator, and a handshake-valid
+successor receiver. It creates three fully completed rounds with five tickets:
+
+- Round 1: two unclaimed jackpot winners.
+- Round 2: an additional unclaimed jackpot winner for a Round-1 winner.
+- Round 3: two tied, unclaimed weekly-pool winners and a remaining jackpot
+  reserve.
+
+Before migration, independently calculated values were:
+
+| Item | Amount (6-decimal token units) |
+| --- | ---: |
+| Old-contract token balance | 25,000,000 |
+| Outstanding player liabilities | 17,000,000 |
+| Jackpot reserve | 5,000,000 |
+| Maintenance reserve | 1,500,000 |
+| Oracle reserve | 1,500,000 |
+| Unallocated percentage dust | 0 |
+| Active weekly reserve | 0 |
+| Exact legally migratable amount | 8,000,000 |
+
+The amount is derived from the candidate's actual rule:
+`migratableBalance = max(tokenBalance - playerLiabilities, 0)`. Therefore the
+candidate retains the entire 17,000,000 liability balance in the old contract
+and transfers the 8,000,000 non-liability balance after the seven-day timelock
+and completed-round gate. The successor records exactly that amount.
+
+After migration the old contract enters `MIGRATED_CLAIMS_ONLY`; sales fail, but
+claims remain enabled. The suite claims later Round 2 before Round 1, makes the
+same wallet claim three separate historical rounds, claims two other winners,
+and rejects a duplicate claim. After every claim it independently verifies the
+winner token transfer, decreases in old-contract balance and
+`playerLiabilities`, and that the remaining old-contract balance equals exactly
+the remaining player liability.
+
+The completed-round reserves remain visible in old-contract storage because
+the candidate does not clear reserve variables during migration; they are the
+contract's explicitly permitted migrated amount and are not retained claim
+liabilities in claims-only mode. This is documented behavior, not a transfer of
+earned player claims.
+
+Separate fixtures prove `executeMigration` fails atomically after the timelock
+when the current round is OPEN, CLOSED, VRF_REQUESTED, or in incomplete
+SETTLEMENT. In every case, the receiver receives nothing and balances,
+liabilities, reserves, and migration state remain unchanged.
+
+Finding `ADV-INFO-002`: reserve storage values are historical after
+`MIGRATED_CLAIMS_ONLY`; downstream reporting must distinguish them from funds
+held by the old contract. No Critical, High, Medium, or Low migration-accounting
+defect was found by this local gate.
+
+The wider adversarial gate remains incomplete: hostile-successor and remaining
+pause/emergency coverage must still pass before the overall production-candidate
+adversarial gate can pass.
+
