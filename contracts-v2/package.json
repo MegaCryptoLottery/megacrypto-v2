@@ -7,6 +7,7 @@
     "compile:production": "node scripts/compile-production-candidate.mjs",
     "test": "mocha --timeout 120000 test/**/*.test.mjs",
     "test:production": "npm run compile && npm run compile:production && mocha --timeout 120000 test/production-candidate.test.mjs",
+    "test:production:multiround": "npm run compile && npm run compile:production && mocha --timeout 900000 test/production-candidate.multiround.test.mjs",
     "test:gas": "mocha --timeout 120000 test/gas.test.mjs",
     "test:invariant": "mocha --timeout 120000 test/invariant.test.mjs",
     "lint:static": "node scripts/static-analysis.mjs"
