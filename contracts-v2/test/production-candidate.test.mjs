@@ -39,5 +39,18 @@ describe('official-import production candidate', function () {
     assert.equal((await next.lottery.rounds(1)).drawMethod, 2n); await assert.rejects(next.coordinator.fulfill(1, 99).then((tx) => tx.wait())); await assertSolvent(next.lottery);
   });
   it('preserves exact token scaling for both supported USDT decimal conventions', async () => { for (const decimals of [6, 18]) { const { lottery } = await fixture(decimals); assert.equal(await lottery.usdtDecimals(), BigInt(decimals)); assert.equal((await lottery.rounds(1)).ticketPrice, 5n * 10n ** BigInt(decimals)); } });
+  it('enforces Chainlink two-step ownership and does not affect earned claims', async () => {
+    const { lottery, owner, player, attacker, provider, coordinator } = await fixture();
+    await assert.rejects(lottery.connect(attacker).setEmergencyAuthority(await attacker.getAddress()));
+    await (await lottery.connect(player).buyTicket(ticketMask())).wait(); await advance(provider, 7 * 24 * 60 * 60 + 1); await (await lottery.closeRound(1)).wait(); await (await lottery.requestRandomness(1)).wait(); await (await coordinator.fulfill(1, 5)).wait(); await (await lottery.processSettlement(1, 1)).wait();
+    await (await lottery.connect(owner).transferOwnership(await attacker.getAddress())).wait(); await assert.rejects(lottery.connect(attacker).proposeFutureVrfConfig(await lottery.vrfConfig(1)).then((tx) => tx.wait())); await (await lottery.connect(attacker).acceptOwnership()).wait(); assert.equal(await lottery.owner(), await attacker.getAddress());
+    await (await lottery.connect(attacker).setEmergencyAuthority(await attacker.getAddress())).wait(); await (await lottery.connect(attacker).setEmergencyPause(true, ethers.ZeroHash)).wait(); await assert.rejects(lottery.connect(player).buyTicket(ticketMask())); await (await lottery.connect(player).claim(1, 0)).wait(); await assertSolvent(lottery);
+  });
+  it('rejects invalid lifecycle transitions without mutating a round', async () => {
+    const { lottery, player, provider, coordinator } = await fixture();
+    await assert.rejects(lottery.closeRound(1)); await assert.rejects(lottery.requestRandomness(1)); await assert.rejects(lottery.processSettlement(1, 1)); await assert.rejects(lottery.openNextRound());
+    await (await lottery.connect(player).buyTicket(ticketMask())).wait(); await advance(provider, 7 * 24 * 60 * 60 + 1); await (await lottery.closeRound(1)).wait(); await assert.rejects(lottery.closeRound(1).then((tx) => tx.wait())); await assert.rejects(lottery.executeManualContingency(1, 1, ethers.ZeroHash, ethers.ZeroHash, { gasLimit: 500000 }).then((tx) => tx.wait()));
+    await (await lottery.requestRandomness(1)).wait(); await assert.rejects(lottery.requestRandomness(1).then((tx) => tx.wait())); await assert.rejects(lottery.processSettlement(1, 1).then((tx) => tx.wait())); await (await coordinator.fulfill(1, 4)).wait(); await assert.rejects(lottery.executeManualContingency(1, 1, ethers.ZeroHash, ethers.ZeroHash, { gasLimit: 500000 }).then((tx) => tx.wait())); assert.equal((await lottery.rounds(1)).state, 3n); await assertSolvent(lottery);
+  });
 });
 
