@@ -45,8 +45,18 @@ Slither `0.11.6` ran locally against
 `solc 0.8.28+commit.7893614a.Windows.msvc`, remappings to the installed official
 Chainlink/OpenZeppelin packages, `--via-ir --optimize --optimize-runs 200
 --evm-version shanghai`, and `--exclude-dependencies`. The reproducible command
-is documented in the source-control command history and the generated JSON is
-intentionally ignored as a build artifact.
+from `contracts-v2` is:
+
+```powershell
+$env:VIRTUAL_ENV = (Resolve-Path '.\\.slither-venv').Path
+$env:Path = "$env:VIRTUAL_ENV\\Scripts;$env:Path"
+& .\\.slither-venv\\Scripts\\slither.exe contracts-production\\MegaCryptoLotteryV2ProductionCandidate.sol `
+  --solc-remaps '@chainlink/contracts=node_modules/@chainlink/contracts @openzeppelin/contracts=node_modules/@openzeppelin/contracts' `
+  --solc-args '--via-ir --optimize --optimize-runs 200 --evm-version shanghai' `
+  --exclude-dependencies --json artifacts\\slither-production.json
+```
+
+The generated JSON is intentionally ignored as a build artifact.
 
 Slither reported no Critical or High finding. Detector output was reviewed:
 
