@@ -161,3 +161,31 @@ The wider adversarial gate remains incomplete: remaining pause/emergency and
 other required suites must still pass before the overall production-candidate
 adversarial gate can pass.
 
+## Pause / emergency authority gate — PASS (local Ganache)
+
+The pause/emergency suite uses distinct owner, emergency-authority, player,
+attacker, replacement-authority, and pending-owner accounts. It verifies the
+candidate's exact boundary rather than treating pause as a blanket freeze:
+
+| Scenario | Result | Evidence |
+| --- | --- | --- |
+| Authority separation | PASS | Only the owner can rotate emergency authority, transfer ownership, configure VRF, or propose migration. An attacker has neither role. |
+| OPEN pause / recovery | PASS | Pause blocks ticket sales without moving tickets, token balance, reserves, or liabilities; unpause resumes normal sales. |
+| Earned claims while paused | PASS | `claim` is intentionally not pause-gated. The historical winner receives the exact entitlement; liabilities and old balance fall equally; duplicate claim fails. |
+| CLOSED / VRF_REQUESTED pause | PASS | Pause blocks `requestRandomness`, but the authenticated coordinator callback is intentionally allowed and produces exactly one mapped result. |
+| SETTLEMENT pause | PASS | Pause freezes the settlement cursor and accounting; unpause resumes bounded settlement to completion. |
+| Manual contingency | PASS | Unauthorized and pre-timeout calls fail. After `VRF_TIMEOUT`, emergency authority records `MANUAL_CONTINGENCY` with reason/evidence; the original coordinator callback cannot overwrite it. |
+| Authority rotation / ownership | PASS | Old authority loses pause power immediately, replacement gains only emergency power, and two-step ownership transfer neither grants pending-owner powers early nor silently rotates emergency authority. |
+| Claims-only interaction | PASS | After migration, pause/emergency operations cannot reopen sales, lifecycle, draw, or migration; the paused historical claim remains payable and non-duplicable. |
+
+Rejected operations are checked with independent snapshots of token balance,
+liabilities, reserve fields, weekly pool, ticket count, settlement cursor, and
+round state. No Critical, High, Medium, or Low pause/emergency defect was found
+by this local gate.
+
+Finding `ADV-INFO-004`: authenticated Chainlink callback delivery is not
+pause-gated, by design. Pause blocks new lifecycle entry and settlement while
+allowing a legitimate pending callback to record exactly its bound result; this
+avoids a pause-created VRF liveness failure without weakening mapping/state
+guards.
+
