@@ -123,3 +123,41 @@ The wider adversarial gate remains incomplete: hostile-successor and remaining
 pause/emergency coverage must still pass before the overall production-candidate
 adversarial gate can pass.
 
+## Hostile successor gate — PASS (local Ganache)
+
+The hostile-successor suite begins with a completed jackpot round containing a
+real unclaimed `playerLiabilities` balance of 4,400,000 token units. Its
+old-contract balance is 5,000,000, so the exact candidate rule permits only
+600,000 to migrate and leaves the 4,400,000 claim liability in the old
+contract.
+
+| Successor scenario | Result | Exact protection |
+| --- | --- | --- |
+| Zero address | PASS | `proposeMigration` rejects `address(0)`. |
+| EOA | PASS | `code.length > 0` rejects non-contract targets. |
+| Wrong magic | PASS | The returned `migrationReceiverMagic` differs from `MIGRATION_MAGIC`. |
+| Wrong token / chain | PASS | The candidate supplies `address(usdt)` and `block.chainid` to the receiver handshake; a receiver configured for another value returns an invalid magic value and is rejected. |
+| Malformed ABI response | PASS | ABI decoding of the handshake result reverts atomically. |
+| Validation revert | PASS | A reverting handshake cannot propose a migration. |
+| Fake-compatible receipt revert | PASS | `receiveMigration` reversion rolls back the SafeERC20 transfer and every migration-state change. |
+| Fake-compatible reentrancy | PASS | `executeMigration` is `nonReentrant`; attempted reentry is rejected. Attempts to propose are blocked by ownership and attempts to claim are blocked by ticket ownership. |
+| Duplicate migration | PASS | `MIGRATED_CLAIMS_ONLY` prevents a second execution or receipt. |
+| Post-migration historical claim | PASS | The old contract retains the exact liability balance, pays the historical winner, and rejects a duplicate claim. |
+
+Every failed proposal/execution uses independent snapshots of old and successor
+token balances, player liabilities, all reserve fields, migration state,
+successor configuration, and historical claim entitlement. The snapshots remain
+unchanged after each expected failure. The valid reentrant-receiver execution
+transfers only the independently calculated non-liability balance; it cannot
+obtain the retained player claim funds.
+
+Finding `ADV-INFO-003`: token and chain identity are inputs to the public
+receiver handshake, not separate candidate-side storage comparisons. A receiver
+can and should validate those supplied values; a receiver configured for a
+different token or chain fails the handshake. No Critical, High, Medium, or Low
+hostile-successor defect was found by this local gate.
+
+The wider adversarial gate remains incomplete: remaining pause/emergency and
+other required suites must still pass before the overall production-candidate
+adversarial gate can pass.
+
