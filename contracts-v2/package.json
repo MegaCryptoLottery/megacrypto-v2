@@ -5,6 +5,9 @@
   "scripts": {
     "compile": "node scripts/compile.mjs",
     "compile:production": "node scripts/compile-production-candidate.mjs",
+    "compile:amoy": "node scripts/compile-amoy-package.mjs",
+    "amoy:prepare": "npm run compile:production && npm run compile:amoy && node scripts/prepare-amoy-deployment.mjs",
+    "amoy:validate": "npm run compile:production && node scripts/validate-amoy-deployment.mjs",
     "test": "mocha --timeout 120000 test/**/*.test.mjs",
     "test:production": "npm run compile && npm run compile:production && mocha --timeout 120000 test/production-candidate.test.mjs",
     "test:production:multiround": "npm run compile && npm run compile:production && mocha --timeout 900000 test/production-candidate.multiround.test.mjs",
