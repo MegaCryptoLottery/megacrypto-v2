@@ -18,7 +18,8 @@ async function fixture() {
   const token = await deploy(artifact('mocks/MockERC20.sol', 'MockERC20'), [6]);
   const coordinator = await deploy(coordinatorArtifact);
   const config = { coordinator: await coordinator.getAddress(), subscriptionId: 1n, keyHash: ethers.ZeroHash, callbackGasLimit: 500000, requestConfirmations: 3, numWords: 1, payWithNative: true };
-  const lottery = await deploy(candidate, [await token.getAddress(), 6, 7 * DAY, 5_000_000n, config, await owner.getAddress()]);
+  const economics = { ticketPrice: 5_000_000n, roundDuration: 7 * DAY, jackpotBps: 5000, weeklyBps: 3800, maintenanceBps: 600, oracleBps: 600, maintenanceWallet: await owner.getAddress(), oracleWallet: await owner.getAddress() };
+  const lottery = await deploy(candidate, [await token.getAddress(), 6, economics, config, await owner.getAddress()]);
   await (await token.mint(await player.getAddress(), 10_000_000_000n)).wait();
   await (await token.connect(player).approve(await lottery.getAddress(), ethers.MaxUint256)).wait();
   return { provider, owner, player, token, coordinator, lottery, deploy, blockGasLimit: Number((await provider.getBlock('latest')).gasLimit) };
@@ -54,4 +55,3 @@ const settlement = {};
 for (const count of [1, 10, 100, 200]) settlement[count] = await settleFixture(count);
 const result = { harness: 'Ganache local EVM only', blockGasLimit: f.blockGasLimit, gas, settlement };
 console.log(`PRODUCTION_CANDIDATE_GAS ${JSON.stringify(result)}`);
-

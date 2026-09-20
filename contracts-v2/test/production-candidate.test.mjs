@@ -15,7 +15,8 @@ async function fixture(decimals = 6) {
   const token = await deploy(artifact('mocks/MockERC20.sol', 'MockERC20'), [decimals]);
   const coordinator = await deploy(coordinatorArtifact, []);
   const config = { coordinator: await coordinator.getAddress(), subscriptionId: 1n, keyHash: ethers.ZeroHash, callbackGasLimit: 500000, requestConfirmations: 3, numWords: 1, payWithNative: true };
-  const lottery = await deploy(candidateArtifact, [await token.getAddress(), decimals, 7 * 24 * 60 * 60, 5n * 10n ** BigInt(decimals), config, await owner.getAddress()]);
+  const economics = { ticketPrice: 5n * 10n ** BigInt(decimals), roundDuration: 7 * 24 * 60 * 60, jackpotBps: 5000, weeklyBps: 3800, maintenanceBps: 600, oracleBps: 600, maintenanceWallet: await owner.getAddress(), oracleWallet: await owner.getAddress() };
+  const lottery = await deploy(candidateArtifact, [await token.getAddress(), decimals, economics, config, await owner.getAddress()]);
   for (const signer of [player, attacker]) { await (await token.mint(await signer.getAddress(), 100000n * 10n ** BigInt(decimals))).wait(); await (await token.connect(signer).approve(await lottery.getAddress(), ethers.MaxUint256)).wait(); }
   return { provider, owner, player, attacker, token, coordinator, lottery };
 }
@@ -52,5 +53,16 @@ describe('official-import production candidate', function () {
     await (await lottery.connect(player).buyTicket(ticketMask())).wait(); await advance(provider, 7 * 24 * 60 * 60 + 1); await (await lottery.closeRound(1)).wait(); await assert.rejects(lottery.closeRound(1).then((tx) => tx.wait())); await assert.rejects(lottery.executeManualContingency(1, 1, ethers.ZeroHash, ethers.ZeroHash, { gasLimit: 500000 }).then((tx) => tx.wait()));
     await (await lottery.requestRandomness(1)).wait(); await assert.rejects(lottery.requestRandomness(1).then((tx) => tx.wait())); await assert.rejects(lottery.processSettlement(1, 1).then((tx) => tx.wait())); await (await coordinator.fulfill(1, 4)).wait(); await assert.rejects(lottery.executeManualContingency(1, 1, ethers.ZeroHash, ethers.ZeroHash, { gasLimit: 500000 }).then((tx) => tx.wait())); assert.equal((await lottery.rounds(1)).state, 3n); await assertSolvent(lottery);
   });
+  it('keeps the VRF coordinator immutable while permitting delayed same-coordinator parameter snapshots', async () => {
+    const { lottery, player, provider, coordinator, owner } = await fixture();
+    const deploy = async (a, args = []) => { const c = await new ethers.ContractFactory(a.abi, a.evm.bytecode.object, owner).deploy(...args); await c.waitForDeployment(); return c; };
+    const otherCoordinator = await deploy(coordinatorArtifact);
+    const original = await lottery.vrfConfig(1);
+    const config = (changes = {}) => ({ coordinator: original.coordinator, subscriptionId: original.subscriptionId, keyHash: original.keyHash, callbackGasLimit: original.callbackGasLimit, requestConfirmations: original.requestConfirmations, numWords: original.numWords, payWithNative: original.payWithNative, ...changes });
+    await assert.rejects(lottery.proposeFutureVrfConfig(config({ coordinator: await otherCoordinator.getAddress() })));
+    await (await lottery.connect(player).buyTicket(ticketMask())).wait(); await advance(provider, 7 * 24 * 60 * 60 + 1); await (await lottery.closeRound(1)).wait(); await (await lottery.requestRandomness(1)).wait();
+    await (await lottery.proposeFutureVrfConfig(config({ keyHash: ethers.id('future-parameters') }))).wait(); await advance(provider, 2 * 24 * 60 * 60 + 1); await (await lottery.activateFutureVrfConfig()).wait();
+    assert.equal((await lottery.vrfConfig(2)).coordinator, await coordinator.getAddress());
+    await (await coordinator.fulfill(1, 91)).wait(); assert.equal((await lottery.rounds(1)).drawMethod, 1n);
+  });
 });
-

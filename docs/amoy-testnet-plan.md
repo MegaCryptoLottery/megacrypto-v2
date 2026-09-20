@@ -17,9 +17,13 @@ This package prepares an unsigned, dry-run-only Polygon Amoy deployment. It does
 | Callback gas / coordinator maximum | `500,000` / `2,500,000` |
 | Payment | VRF v2.5 subscription, native payment `true` |
 
-The callback limit remains `500,000`: the frozen candidate’s local artifact measurement completed a fulfillment transaction in 80,683 gas with this setting, leaving headroom and staying below the coordinator maximum. It is a testnet starting value, not a mainnet estimate. `subscriptionId` is **PENDING** and is not invented.
+The callback limit remains `500,000`: the post-admin local artifact measurement
+completed a fulfillment transaction in 63,330 gas with this setting, leaving
+headroom and staying below the coordinator maximum. It is a testnet starting
+value, not a mainnet estimate. `subscriptionId` is **PENDING** and is not
+invented.
 
-## Exact frozen constructor
+## Exact post-admin constructor
 
 `MegaCryptoLotteryV2ProductionCandidate` constructor order is exact.
 
@@ -27,12 +31,20 @@ The callback limit remains `500,000`: the frozen candidate’s local artifact me
 | ---: | --- | --- | --- | --- |
 | 1 | `token` | `address` | ERC-20 payment token | `PENDING_DEPLOY_MOCK_USDT` |
 | 2 | `decimals_` | `uint8` | token decimal convention | `6` |
-| 3 | `duration` | `uint64` | round duration/cutoff | `PENDING_OPERATIONAL_DECISION`; candidate minimum is one day |
-| 4 | `price` | `uint128` | ticket price in token base units | `PENDING_OPERATIONAL_DECISION`; 5 test USDT would be `5_000_000`, but is not selected here |
-| 5 | `initial` | `VrfConfig` | VRF request configuration | below; subscription ID pending |
-| 6 | `emergency` | `address` | emergency pause/manual-contingency authority | `PENDING_USER_DECISION` |
+| 3 | `initialRound` | `FutureRoundConfig` | future-only price, duration, BPS, and operational wallet template | below; wallets are `PENDING_USER_ADDRESS` |
+| 4 | `initial` | `VrfConfig` | VRF request configuration | below; subscription ID pending |
+| 5 | `emergency` | `address` | emergency pause/manual-contingency authority | `PENDING_USER_ADDRESS` |
 
 The constructor calls `VRFConsumerBaseV2Plus(initial.coordinator)`; inherited `ConfirmedOwner` sets `owner()` to the deployment sender. Therefore `OWNER_ADDRESS=PENDING_USER_WALLET` until a wallet-controlled sender is selected; owner is not a separate constructor parameter.
+
+| `FutureRoundConfig` field | Type | Value/status |
+| --- | --- | --- |
+| `ticketPrice` | `uint128` | `PENDING_OPERATIONAL_DECISION`; 5 test USDT would be `5_000_000` for MockUSDT's six decimals |
+| `roundDuration` | `uint64` | `PENDING_OPERATIONAL_DECISION`; minimum one day |
+| `jackpotBps` / `weeklyBps` | `uint16` | default intended `5000` / `3800`; total including fees must be exactly `10000` |
+| `maintenanceBps` / `oracleBps` | `uint16` | default intended `600` / `600` |
+| `maintenanceWallet` | `address` | `PENDING_USER_ADDRESS` |
+| `oracleWallet` | `address` | `PENDING_USER_ADDRESS` |
 
 | `VrfConfig` field | Type | Value/status |
 | --- | --- | --- |
@@ -46,7 +58,7 @@ The constructor calls `VRFConsumerBaseV2Plus(initial.coordinator)`; inherited `C
 
 ## Test-only MockUSDT
 
-`contracts-v2/contracts-testnet/MockUSDT.sol` is **TESTNET ONLY**, **NOT PRODUCTION**, and **NOT REAL USDT**. It is an ERC-20 named `Mock USDT`, symbol `USDT`, decimals `6`, with deterministic owner-only minting. It is not imported by or a modification of the frozen candidate.
+`contracts-v2/contracts-testnet/MockUSDT.sol` is **TESTNET ONLY**, **NOT PRODUCTION**, and **NOT REAL USDT**. It is an ERC-20 named `Mock USDT`, symbol `USDT`, decimals `6`, with deterministic owner-only minting. It is not imported by or a modification of the post-admin candidate.
 
 ## Safe package commands
 
@@ -69,14 +81,15 @@ The scripts contain no private-key handling and no broadcast implementation. The
 6. Claim if applicable; open next round; execute multiple rounds.
 7. Controlled pause/unpause; controlled manual contingency; final Amoy report.
 
-## Frozen candidate verification
+## Candidate hash transition
 
 | Artifact | SHA-256 |
 | --- | --- |
-| Source | `7a0864029420637eaf8635da405ce70ccfbe08f4abf2d5d7f1751b2cb1745e24` |
-| ABI | `fb2631608e3aef666dfb2013035678a6aec562581dece30a44ee77b5f8c776f3` |
-| Creation | `56b4a1a21d412f24ed7fa50295e08bb42fc3025b20fdcf18475cdddbad0d8a98` |
-| Runtime | `ed8eff46cf8fcf290ff95869fea064ef3fec3fb874523b2203e12388ad6373ff` |
+| Pre-admin source | `7a0864029420637eaf8635da405ce70ccfbe08f4abf2d5d7f1751b2cb1745e24` |
+| Post-admin source | `7bfbf15b5a820d113699348734047d2b3d68182eb6c4e8a4f180047ff44a226a` |
+| Post-admin ABI | `0199f62a2caa3712a0ea04fe939a7c6921076f3959b23db942a7352135070fb2` |
+| Post-admin creation | `e616919ed89737c3415b87a15dc48f76e2a98b5037b4ea576d58db9b2be8ba4d` |
+| Post-admin runtime | `9406689bc180e8f7de81d6391a0670c6ed65c461b5c76aa58e7180bd0177ac13` |
 
-Production candidate Solidity remains frozen and unchanged.
-
+The post-admin candidate is a local review artifact. It remains unsigned and
+undeployed; the dry-run package has no broadcast code.
