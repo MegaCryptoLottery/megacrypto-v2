@@ -21,7 +21,8 @@ export const AMOY = Object.freeze({
   emergencyAuthority: 'PENDING_USER_ADDRESS'
 });
 export const preAdminFrozen = Object.freeze({ source: '7a0864029420637eaf8635da405ce70ccfbe08f4abf2d5d7f1751b2cb1745e24', abi: 'fb2631608e3aef666dfb2013035678a6aec562581dece30a44ee77b5f8c776f3', creation: '56b4a1a21d412f24ed7fa50295e08bb42fc3025b20fdcf18475cdddbad0d8a98', runtime: 'ed8eff46cf8fcf290ff95869fea064ef3fec3fb874523b2203e12388ad6373ff' });
-export const postAdminCandidate = Object.freeze({ source: '7bfbf15b5a820d113699348734047d2b3d68182eb6c4e8a4f180047ff44a226a', abi: '0199f62a2caa3712a0ea04fe939a7c6921076f3959b23db942a7352135070fb2', creation: 'e616919ed89737c3415b87a15dc48f76e2a98b5037b4ea576d58db9b2be8ba4d', runtime: '9406689bc180e8f7de81d6391a0670c6ed65c461b5c76aa58e7180bd0177ac13' });
+// Supersedes the post-admin artifact with the legacy-compatible 1..25 mask candidate.
+export const postAdminCandidate = Object.freeze({ source: 'dcf7b58db6ad8c4d2e0640e85437bd6cab8ea64d6aa24a1469964d06d6f2e564', abi: '0199f62a2caa3712a0ea04fe939a7c6921076f3959b23db942a7352135070fb2', creation: '5182efc9d03fc2ce2452fbf22bad398e42a0eb4f64b2ed33d462c033cc5853cf', runtime: '9166c142313b2eebc9b0d24cf1361a1505e77206aea6d59a00002490a4a12199' });
 export function candidateArtifact() { const a = JSON.parse(fs.readFileSync(new URL('../artifacts/production-candidate.json', import.meta.url), 'utf8')); return a['MegaCryptoLotteryV2ProductionCandidate.sol'].MegaCryptoLotteryV2ProductionCandidate; }
 export function mockArtifact() { const a = JSON.parse(fs.readFileSync(new URL('../artifacts/amoy-testnet.json', import.meta.url), 'utf8')); return a['contracts-testnet/MockUSDT.sol'].MockUSDT; }
 export function assertDryRun() { if (process.env.AMOY_BROADCAST === 'CONFIRM') throw new Error('This package intentionally has no signer or broadcast implementation. Use a wallet-controlled deployment process only after separate authorization.'); }

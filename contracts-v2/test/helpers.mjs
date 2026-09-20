@@ -4,11 +4,12 @@ import ganache from 'ganache';
 
 const artifacts = JSON.parse(fs.readFileSync(new URL('../artifacts/contracts.json', import.meta.url), 'utf8'));
 export const artifact = (file, name) => artifacts[file][name];
-export const ticketMask = (numbers = Array.from({ length: 15 }, (_, i) => i + 1)) => numbers.reduce((mask, n) => mask | (1 << (n - 1)), 0);
+// MegaCrypto's deployed lottery convention reserves bit 0: number n uses bit n.
+export const ticketMask = (numbers = Array.from({ length: 15 }, (_, i) => i + 1)) => numbers.reduce((mask, n) => mask | (1 << n), 0);
 export const winningMask = (word) => {
   let mask = 0; let selected = 0; let nonce = 0;
   const coder = ethers.AbiCoder.defaultAbiCoder();
-  while (selected < 15) { const n = Number(BigInt(ethers.keccak256(coder.encode(['uint256', 'uint256'], [word, nonce++]))) % 25n); const bit = 1 << n; if ((mask & bit) === 0) { mask |= bit; selected++; } }
+  while (selected < 15) { const n = Number(BigInt(ethers.keccak256(coder.encode(['uint256', 'uint256'], [word, nonce++]))) % 25n) + 1; const bit = 1 << n; if ((mask & bit) === 0) { mask |= bit; selected++; } }
   return mask;
 };
 export async function fixture(decimals = 6) {
@@ -24,4 +25,3 @@ export async function fixture(decimals = 6) {
   return { provider, owner, player, attacker, token, vrf, lottery, deploy, decimals };
 }
 export const advance = async (provider, seconds) => { await provider.send('evm_increaseTime', [seconds]); await provider.send('evm_mine', []); };
-

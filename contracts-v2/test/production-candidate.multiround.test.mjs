@@ -54,8 +54,8 @@ const popcount = (x) => { let n = 0; while (x) { n++; x &= x - 1; } return n; };
 const exactScoreMask = (winner, score) => {
   if (score === 15) return winner;
   let kept = 0, replacement = 0, need = score;
-  for (let bit = 0; bit < 25; bit++) if ((winner & (1 << bit)) && need-- > 0) kept |= 1 << bit;
-  for (let bit = 0; bit < 25 && popcount(replacement) < 15 - score; bit++) if (!(winner & (1 << bit))) replacement |= 1 << bit;
+  for (let bit = 1; bit <= 25; bit++) if ((winner & (1 << bit)) && need-- > 0) kept |= 1 << bit;
+  for (let bit = 1; bit <= 25 && popcount(replacement) < 15 - score; bit++) if (!(winner & (1 << bit))) replacement |= 1 << bit;
   return kept | replacement;
 };
 const rng = (seed) => () => { seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0; return seed; };
@@ -150,4 +150,3 @@ describe('production candidate multi-round independent accounting gate', functio
     await assert.rejects(ctx.lottery.connect(ctx.signers[1]).claim(first.id, 0));
   });
 });
-

@@ -86,10 +86,10 @@ The scripts contain no private-key handling and no broadcast implementation. The
 | Artifact | SHA-256 |
 | --- | --- |
 | Pre-admin source | `7a0864029420637eaf8635da405ce70ccfbe08f4abf2d5d7f1751b2cb1745e24` |
-| Post-admin source | `7bfbf15b5a820d113699348734047d2b3d68182eb6c4e8a4f180047ff44a226a` |
-| Post-admin ABI | `0199f62a2caa3712a0ea04fe939a7c6921076f3959b23db942a7352135070fb2` |
-| Post-admin creation | `e616919ed89737c3415b87a15dc48f76e2a98b5037b4ea576d58db9b2be8ba4d` |
-| Post-admin runtime | `9406689bc180e8f7de81d6391a0670c6ed65c461b5c76aa58e7180bd0177ac13` |
+| Current mask-compatible source | `dcf7b58db6ad8c4d2e0640e85437bd6cab8ea64d6aa24a1469964d06d6f2e564` |
+| Current ABI | `0199f62a2caa3712a0ea04fe939a7c6921076f3959b23db942a7352135070fb2` |
+| Current creation | `5182efc9d03fc2ce2452fbf22bad398e42a0eb4f64b2ed33d462c033cc5853cf` |
+| Current runtime | `9166c142313b2eebc9b0d24cf1361a1505e77206aea6d59a00002490a4a12199` |
 
 The post-admin candidate is a local review artifact. It remains unsigned and
 undeployed; the dry-run package has no broadcast code.

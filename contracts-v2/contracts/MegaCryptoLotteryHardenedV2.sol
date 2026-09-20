@@ -298,8 +298,7 @@ contract MegaCryptoLotteryHardenedV2 is IAutomationCompatible {
 
     function _openNextRound() internal { require(rounds[currentRoundId].state == RoundState.COMPLETED && migrationState == MigrationState.NORMAL, "NOT_OPENABLE"); _openRound(rounds[currentRoundId].ticketPrice); }
     function _openRound(uint128 ticketPrice_) internal { currentRoundId++; Round storage r = rounds[currentRoundId]; r.state = RoundState.OPEN; r.openedAt = uint64(block.timestamp); r.cutoffAt = uint64(block.timestamp + roundDuration); r.ticketPrice = ticketPrice_; r.configVersion = configVersion; emit RoundOpened(currentRoundId, r.cutoffAt, ticketPrice_, address(usdt), configVersion); }
-    function _winningMask(uint256 randomWord) internal pure returns (uint32 mask) { uint256 selected; uint256 nonce; while (selected < TICKET_NUMBERS) { uint256 n = uint256(keccak256(abi.encode(randomWord, nonce++))) % MAX_NUMBER; uint32 bit = uint32(1 << n); if (mask & bit == 0) { mask |= bit; selected++; } } }
-    function _isValidTicketMask(uint32 mask) internal pure returns (bool) { return mask >> MAX_NUMBER == 0 && _popcount(mask) == TICKET_NUMBERS; }
+    function _winningMask(uint256 randomWord) internal pure returns (uint32 mask) { uint256 selected; uint256 nonce; while (selected < TICKET_NUMBERS) { uint256 n = 1 + (uint256(keccak256(abi.encode(randomWord, nonce++))) % MAX_NUMBER); uint32 bit = uint32(1 << n); if (mask & bit == 0) { mask |= bit; selected++; } } }
+    function _isValidTicketMask(uint32 mask) internal pure returns (bool) { return (mask & 1) == 0 && mask >> (MAX_NUMBER + 1) == 0 && _popcount(mask) == TICKET_NUMBERS; }
     function _popcount(uint32 value) internal pure returns (uint8 count) { while (value != 0) { count++; value &= value - 1; } }
 }
-

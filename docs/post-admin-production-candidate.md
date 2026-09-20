@@ -38,17 +38,28 @@ official installed package imports and has no Solidity compiler errors.
 | Creation bytecode | `56b4a1a21d412f24ed7fa50295e08bb42fc3025b20fdcf18475cdddbad0d8a98` |
 | Runtime bytecode | `ed8eff46cf8fcf290ff95869fea064ef3fec3fb874523b2203e12388ad6373ff` |
 
-**POST-ADMIN HASHES** for `POST_ADMIN_CONTROLS_V1`:
+**POST-ADMIN HASHES** for `POST_ADMIN_CONTROLS_V1` are superseded by the
+mask-compatibility candidate below. They remain historical evidence only.
+
+**MASK-COMPATIBILITY HASHES** for the current candidate:
 
 | Artifact | SHA-256 | Size |
 | --- | --- | ---: |
-| Source | `7bfbf15b5a820d113699348734047d2b3d68182eb6c4e8a4f180047ff44a226a` | — |
+| Source | `dcf7b58db6ad8c4d2e0640e85437bd6cab8ea64d6aa24a1469964d06d6f2e564` | — |
 | ABI | `0199f62a2caa3712a0ea04fe939a7c6921076f3959b23db942a7352135070fb2` | — |
-| Creation bytecode | `e616919ed89737c3415b87a15dc48f76e2a98b5037b4ea576d58db9b2be8ba4d` | 21,084 bytes |
-| Runtime bytecode | `9406689bc180e8f7de81d6391a0670c6ed65c461b5c76aa58e7180bd0177ac13` | 18,397 bytes |
+| Creation bytecode | `5182efc9d03fc2ce2452fbf22bad398e42a0eb4f64b2ed33d462c033cc5853cf` | 21,115 bytes |
+| Runtime bytecode | `9166c142313b2eebc9b0d24cf1361a1505e77206aea6d59a00002490a4a12199` | 18,428 bytes |
 
 The runtime is below EIP-170's 24,576-byte limit and creation bytecode below
 EIP-3860's 49,152-byte initcode limit.
+
+## Ticket-mask compatibility
+
+The candidate preserves the verified legacy/frontend convention: lottery
+number `n` uses bit `n`, for `n = 1..25`; bit `0` is reserved and invalid.
+Winning masks select fifteen unique bits from that same inclusive range. See
+[mask-compatibility.md](mask-compatibility.md) for source evidence and local
+compatibility coverage.
 
 ## Controls and accounting
 

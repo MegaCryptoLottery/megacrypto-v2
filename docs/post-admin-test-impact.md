@@ -5,6 +5,11 @@ revision.  It is a local Ganache/EVM test record only: it does not authorize or
 perform a deployment, transaction, signature, ownership change, VRF request, or
 fund movement on a public chain.
 
+The post-admin artifact hashes are superseded by the mask-compatible candidate
+recorded in [mask-compatibility.md](mask-compatibility.md). The administrative
+coverage in this document remains applicable because this correction changes
+only ticket/winning-mask representation.
+
 ## Targeted regression result
 
 Command run after compiling the current candidate artifact:

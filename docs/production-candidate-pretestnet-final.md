@@ -1,5 +1,9 @@
 # Final local pre-testnet technical gate
 
+> Historical record: the frozen hashes below were superseded by the
+> mask-compatible candidate documented in [mask-compatibility.md](mask-compatibility.md).
+> This record is retained for its prior gate evidence only.
+
 ## Decision
 
 **GO — local technical gate only.** This is not authorization to deploy, create
@@ -174,4 +178,3 @@ an assertion that any automation/CRE is configured.
 
 Unresolved Critical: 0. Unresolved High: 0. Unresolved Medium: 0. Unresolved
 Low: 0. No production Solidity was changed. Public-chain actions: **ZERO**.
-
