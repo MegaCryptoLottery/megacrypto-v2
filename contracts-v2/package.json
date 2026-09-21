@@ -14,7 +14,11 @@
     "test:production:multiround:all": "node scripts/run-production-multiround-shards.mjs",
     "test:gas": "mocha --timeout 120000 test/gas.test.mjs",
     "test:invariant": "mocha --timeout 120000 test/invariant.test.mjs",
-    "lint:static": "node scripts/static-analysis.mjs"
+    "lint:static": "node scripts/static-analysis.mjs",
+    "deploy:verify-artifact": "node deploy-production/scripts/verify-artifact.mjs",
+    "deploy:dry-run": "node deploy-production/scripts/dry-run.mjs",
+    "deploy:secret-scan": "node deploy-production/scripts/secret-scan.mjs",
+    "test:deployment-package": "npm run compile:production && mocha --timeout 120000 deploy-production/test/**/*.test.mjs"
   },
   "devDependencies": {
     "ethers": "^6.13.4",
@@ -23,4 +27,3 @@
     "solc": "0.8.28"
   }
 }
-
