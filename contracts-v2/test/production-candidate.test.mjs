@@ -16,7 +16,7 @@ async function fixture(decimals = 6) {
   const coordinator = await deploy(coordinatorArtifact, []);
   const config = { coordinator: await coordinator.getAddress(), subscriptionId: 1n, keyHash: ethers.ZeroHash, callbackGasLimit: 500000, requestConfirmations: 3, numWords: 1, payWithNative: true };
   const economics = { ticketPrice: 5n * 10n ** BigInt(decimals), roundDuration: 7 * 24 * 60 * 60, jackpotBps: 5000, weeklyBps: 3800, maintenanceBps: 600, oracleBps: 600, maintenanceWallet: await owner.getAddress(), oracleWallet: await owner.getAddress() };
-  const lottery = await deploy(candidateArtifact, [await token.getAddress(), decimals, economics, config, await owner.getAddress()]);
+  const lottery = await deploy(candidateArtifact, [await token.getAddress(), decimals, economics, 0, config, await owner.getAddress()]);
   for (const signer of [player, attacker]) { await (await token.mint(await signer.getAddress(), 100000n * 10n ** BigInt(decimals))).wait(); await (await token.connect(signer).approve(await lottery.getAddress(), ethers.MaxUint256)).wait(); }
   return { provider, owner, player, attacker, token, coordinator, lottery };
 }

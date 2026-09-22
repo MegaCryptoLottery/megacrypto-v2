@@ -77,6 +77,7 @@ async function fixture({ tokenName = 'TokenBase', decimals = 6 } = {}) {
     await token.getAddress(),
     decimals,
     initial,
+    0,
     vrf,
     await emergency.getAddress()
   ]);
