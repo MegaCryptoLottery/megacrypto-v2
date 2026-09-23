@@ -28,6 +28,9 @@ export const validateTicketNumbers = (numbers: number[]) => {
   return [...numbers].sort((left, right) => left - right);
 };
 
+/** Production V2 compatibility: lottery number n is stored in bit n; bit 0 is invalid. */
+export const encodeTicketMask = (numbers: number[]) => validateTicketNumbers(numbers).reduce((mask, number) => mask | (1n << BigInt(number)), 0n);
+
 export const decidePurchaseAction = (amount: bigint, balance: bigint, allowance: bigint, chain: Pick<ChainConfig, 'name' | 'contracts'>) => {
   if (balance < amount) throw new InsufficientUsdtBalanceError(chain.name, amount, balance, chain.contracts.tokenDecimals);
   return allowance < amount ? 'approval' as const : 'ticket' as const;
@@ -41,6 +44,7 @@ export const assertPreparationNetwork = (connectedChainId: number, chain: Pick<C
 export async function prepareTicketPurchase(chain: ChainConfig, provider: WalletProvider | undefined, numbers: number[]): Promise<TransactionReview> {
   if (!provider || !chain.contracts.lottery || !chain.contracts.token || chain.contracts.status !== 'verified') throw new Error('This lottery deployment is unavailable until it is verified.');
   const normalizedNumbers = validateTicketNumbers(numbers);
+  const ticketMask = encodeTicketMask(normalizedNumbers);
   const connectedNetwork = await provider.getNetwork();
   assertPreparationNetwork(Number(connectedNetwork.chainId), chain);
   const signer = await provider.getSigner();
@@ -48,9 +52,14 @@ export async function prepareTicketPurchase(chain: ChainConfig, provider: Wallet
   if (!wallet) throw new Error('A connected wallet address is required before reviewing a ticket.');
   const lottery = new Contract(chain.contracts.lottery, LOTTERY_ABI, signer);
   const token = new Contract(chain.contracts.token, ERC20_ABI, signer);
-  const [amount, balance, allowance] = await Promise.all([lottery.precoBilhete() as Promise<bigint>, token.balanceOf(wallet) as Promise<bigint>, token.allowance(wallet, chain.contracts.lottery) as Promise<bigint>]);
+  const [roundId, paused, balance, allowance] = await Promise.all([lottery.currentRoundId() as Promise<bigint>, lottery.paused() as Promise<boolean>, token.balanceOf(wallet) as Promise<bigint>, token.allowance(wallet, chain.contracts.lottery) as Promise<bigint>]);
+  if (paused) throw new Error('Ticket sales are temporarily paused on this network.');
+  const round = await lottery.rounds(roundId);
+  const amount = round.ticketPrice as bigint;
+  const cutoffAt = Number(round.cutoffAt);
+  if (Number(round.state) !== 0 || Math.floor(Date.now() / 1000) >= cutoffAt) throw new Error('Ticket sales are closed for the current round.');
   const kind = decidePurchaseAction(amount, balance, allowance, chain);
-  const request = kind === 'approval' ? await token.approve.populateTransaction(chain.contracts.lottery, amount) : await lottery.comprarBilhete.populateTransaction(normalizedNumbers);
+  const request = kind === 'approval' ? await token.approve.populateTransaction(chain.contracts.lottery, amount) : await lottery.buyTicket.populateTransaction(ticketMask);
   const gas = await signer.estimateGas(request);
   const gasLimit = gas + gas / 5n;
   return { kind, network: chain.name, chainId: chain.chainId, wallet, contract: kind === 'approval' ? chain.contracts.token : chain.contracts.lottery, lottery: chain.contracts.lottery, token: chain.contracts.tokenSymbol, tokenAddress: chain.contracts.token, decimals: chain.contracts.tokenDecimals, amount, balance, numbers: normalizedNumbers, allowance, gas, gasLimit, explorer: chain.explorer, request: { ...request, gasLimit } };
@@ -65,4 +74,4 @@ export async function submitReviewed(provider: WalletProvider, review: Transacti
   return tx.wait();
 }
 
-export const friendlyError = (error: unknown) => { if (error instanceof InsufficientUsdtBalanceError) return error.message; const message = error instanceof Error ? error.message : 'Unknown wallet error'; if (/user rejected|denied/i.test(message)) return 'Transaction cancelled in wallet.'; if (/insufficient funds/i.test(message)) return 'Insufficient funds for this transaction and network fee.'; if (/wrong network|chain|network does not match/i.test(message)) return 'Please switch to the selected supported network.'; return message; };
+export const friendlyError = (error: unknown) => { if (error instanceof InsufficientUsdtBalanceError) return error.message; const message = error instanceof Error ? error.message : 'Unknown wallet error'; if (/user rejected|denied/i.test(message)) return 'Transaction cancelled in wallet.'; if (/insufficient funds/i.test(message)) return 'Insufficient funds for this transaction and network fee.'; if (/SALES_CLOSED|CUTOFF|Ticket sales are closed/i.test(message)) return 'Ticket sales are closed for the current round.'; if (/INVALID_TICKET/i.test(message)) return 'The ticket mask is invalid. Select exactly 15 unique numbers from 1 to 25.'; if (/PAUSED|temporarily paused/i.test(message)) return 'Ticket sales are temporarily paused on this network.'; if (/wrong network|chain|network does not match/i.test(message)) return 'Please switch to the selected supported network.'; return message; };

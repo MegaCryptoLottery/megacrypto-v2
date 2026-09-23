@@ -1,9 +1,11 @@
-// Minimal read/write surface. Replace only after matching it against the deployed, verified ABI.
+// Minimal production-candidate surface, matched to MegaCryptoLotteryV2ProductionCandidate.sol.
 export const LOTTERY_ABI = [
-  'function comprarBilhete(uint8[] numeros) external', 'function jackpotAcumulado() view returns (uint256)', 'function poolSemanal() view returns (uint256)',
-  'function precoBilhete() view returns (uint256)', 'function premiosParaSacar(address) view returns (uint256)', 'function reclamarPremio() external',
-  'function getApostasCount() view returns (uint256)', 'function apostasDaSemana(uint256) view returns (address jogador,uint256 mask)',
-  'function getHistoricoCount() view returns (uint256)', 'function ultimosGanhadores(uint256) view returns (address carteira,uint256 valor,uint256 data,string tipo)',
-  'event SorteioSolicitado(uint256 indexed requestId)', 'event SorteioRealizado(uint256 indexed requestId,uint256 maskSorteada)', 'event BilheteComprado(address indexed jogador,uint256 quantidadeApostas)'
+  'function buyTicket(uint32 mask) external', 'function currentRoundId() view returns (uint256)', 'function nextTicketIndex() view returns (uint256)', 'function jackpotReserve() view returns (uint256)',
+  'function rounds(uint256) view returns (uint8 state,uint64 openedAt,uint64 cutoffAt,uint64 closedAt,uint64 requestedAt,uint64 completedAt,uint64 duration,uint128 ticketPrice,uint16 jackpotBps,uint16 weeklyBps,uint16 maintenanceBps,uint16 oracleBps,address maintenanceWallet,address oracleWallet,uint64 ticketStart,uint64 ticketCount,uint64 settlementCursor,uint8 bestScore,uint64 finalistCount,uint32 winningMask,uint256 requestId,bool requestPending,uint8 drawMethod,bytes32 manualReasonHash,bytes32 manualEvidenceHash,uint256 weeklyPool,uint256 jackpotContribution,uint256 totalAward,uint256 configVersion)',
+  'function tickets(uint256) view returns (address player,uint32 mask)', 'function ticketEntitlement(uint256 id,uint256 offset) view returns (address player,uint32 mask,uint8 score,bool winner,uint256 amount,bool claimed)',
+  'function drawEvidence(uint256 id) view returns (uint8 method,uint32 mask,uint256 requestId,address coordinator,uint256 version,uint256 requestedAt,uint256 completedAt,uint8 bestScore,uint256 finalistCount,uint256 totalAward,bytes32 manualReasonHash,bytes32 manualEvidenceHash)',
+  'function protectedReserves() view returns (uint256)', 'function solvency() view returns (uint256 balance,uint256 protectedAmount,bool ok)', 'function paused() view returns (bool)',
+  'event RoundOpened(uint256 indexed id,uint256 cutoff,uint256 price,address token,uint256 version)', 'event TicketPurchased(uint256 indexed id,uint256 indexed index,address indexed player,uint32 mask,uint256 paid,uint256 jackpotShare,uint256 weeklyShare,uint256 maintenanceShare,uint256 oracleShare,uint256 dust)',
+  'event RoundSettled(uint256 indexed id,uint32 mask,uint8 score,uint256 finalists,uint256 award,uint256 dust,uint256 rollover)'
 ] as const;
 export const ERC20_ABI = ['function approve(address spender,uint256 amount) returns (bool)', 'function allowance(address owner,address spender) view returns (uint256)', 'function balanceOf(address account) view returns (uint256)'] as const;

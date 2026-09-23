@@ -20,10 +20,10 @@ export async function readDrawPage(chain: ChainConfig, fromBlock = chain.contrac
       const toBlock = drawPageEnd(fromBlock, latest);
       const lottery = new Contract(chain.contracts.lottery!, LOTTERY_ABI, provider);
       const logs = [] as Awaited<ReturnType<typeof lottery.queryFilter>>;
-      for (let start = fromBlock; start <= toBlock; start += EVENT_SCAN_CHUNK_SIZE) logs.push(...await lottery.queryFilter(lottery.filters.SorteioRealizado(), start, Math.min(start + EVENT_SCAN_CHUNK_SIZE - 1, toBlock)));
+      for (let start = fromBlock; start <= toBlock; start += EVENT_SCAN_CHUNK_SIZE) logs.push(...await lottery.queryFilter(lottery.filters.RoundSettled(), start, Math.min(start + EVENT_SCAN_CHUNK_SIZE - 1, toBlock)));
       const timestamps = new Map<number, number>();
       await Promise.all(logs.map(async (log) => { if (!timestamps.has(log.blockNumber)) timestamps.set(log.blockNumber, (await provider.getBlock(log.blockNumber))?.timestamp ?? 0); }));
-      const draws = logs.map((log) => { const parsed = lottery.interface.parseLog(log); const requestId = parsed?.args.requestId as bigint; const mask = parsed?.args.maskSorteada as bigint; return { chain, requestId, mask, numbers: maskToNumbers(mask), blockNumber: log.blockNumber, transactionHash: log.transactionHash, timestamp: timestamps.get(log.blockNumber) ?? 0 }; });
+      const draws = logs.map((log) => { const parsed = lottery.interface.parseLog(log); const requestId = parsed?.args.id as bigint; const mask = parsed?.args.mask as bigint; return { chain, requestId, mask, numbers: maskToNumbers(mask), blockNumber: log.blockNumber, transactionHash: log.transactionHash, timestamp: timestamps.get(log.blockNumber) ?? 0 }; });
       return { draws, fromBlock, toBlock, nextBlock: toBlock < latest ? toBlock + 1 : undefined, complete: toBlock >= latest };
     });
   } catch (error) { return { draws: [], complete: false, error: error instanceof Error ? error.message : 'RPC event query failed.' }; }

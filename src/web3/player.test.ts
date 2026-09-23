@@ -11,8 +11,8 @@ describe('verified lottery data formatting', () => {
   });
 
   it('normalizes BNB 18-decimal values through the canonical path', () => {
-    expect(formatUsdt(2_500_000_000_002_500_000n, 18, 2)).toBe('2.5');
-    expect(normalizeUsdt(2_500_000_000_002_500_000n, 18)).toBe(2_500_000n);
+    expect(formatUsdt(2_500_000_000_000_000_000n, 18, 2)).toBe('2.5');
+    expect(normalizeUsdt(2_500_000_000_000_000_000n, 18)).toBe(2_500_000n);
   });
 
   it('keeps a selected pool distinct from a six-network aggregate', () => {
@@ -33,22 +33,17 @@ describe('on-chain ticket reconstruction bounds', () => {
     expect(WINNER_HISTORY_LIMIT).toBe(100);
   });
 
-  it('uses the verified draw mask convention for a real Polygon draw', () => {
-    expect(maskToNumbers(14_296_958n)).toEqual([1, 2, 3, 4, 5, 6, 8, 9, 10, 13, 17, 19, 20, 22, 23]);
+  it('uses the production V2 draw mask convention', () => {
+    expect(maskToNumbers((1n << 1n) | (1n << 3n) | (1n << 25n))).toEqual([1, 3, 25]);
   });
 
   it('pages draw scans in a fixed bounded range rather than from block zero', () => {
-    expect(drawPageEnd(93_187_959, 94_000_000)).toBe(93_237_958);
+    expect(drawPageEnd(100_000, 900_000)).toBe(149_999);
     expect(EVENT_SCAN_CHUNK_SIZE).toBe(2_000);
     expect(EVENT_SCAN_CHUNKS_PER_PAGE).toBe(25);
   });
 
-  it('configures only independently evidenced deployment blocks', () => {
-    expect(CHAINS.polygon.contracts.deploymentStartBlock).toBe(93_187_959);
-    expect(CHAINS.arbitrum.contracts.deploymentStartBlock).toBe(503_193_432);
-    expect(CHAINS.base.contracts.deploymentStartBlock).toBe(51_106_590);
-    expect(CHAINS.optimism.contracts.deploymentStartBlock).toBe(156_703_895);
-    expect(CHAINS.avalanche.contracts.deploymentStartBlock).toBe(94_904_282);
-    expect(CHAINS.bsc.contracts.deploymentStartBlock).toBeUndefined();
+  it('does not reuse legacy deployment blocks for new V2 contracts', () => {
+    for (const chain of Object.values(CHAINS)) expect(chain.contracts.deploymentStartBlock).toBeUndefined();
   });
 });

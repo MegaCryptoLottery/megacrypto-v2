@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { Interface } from 'ethers';
 import { CHAINS } from '../config/chains';
 import { LOTTERY_ABI } from '../contracts/lotteryAbi';
-import { InsufficientUsdtBalanceError, assertPreparationNetwork, decidePurchaseAction, formatTokenAmount, friendlyError, validateTicketNumbers } from './transactions';
+import { InsufficientUsdtBalanceError, assertPreparationNetwork, decidePurchaseAction, encodeTicketMask, formatTokenAmount, friendlyError, validateTicketNumbers } from './transactions';
 
 const validTicket = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
 
@@ -41,10 +41,12 @@ describe('ticket preparation guards', () => {
     expect(() => assertPreparationNetwork(CHAINS.bsc.chainId, CHAINS.polygon)).toThrow(/network does not match/i);
   });
 
-  it('keeps the validated display order identical to comprarBilhete(uint8[]) calldata', () => {
+  it('encodes the production V2 1..25 ticket mask and buyTicket(uint32) calldata', () => {
     const displayed = validateTicketNumbers([...validTicket].reverse());
+    const mask = encodeTicketMask(displayed);
+    expect(mask).toBe((1n << 16n) - 2n);
     const iface = new Interface(LOTTERY_ABI);
-    const decoded = iface.decodeFunctionData('comprarBilhete', iface.encodeFunctionData('comprarBilhete', [displayed]));
-    expect(Array.from(decoded.numeros, Number)).toEqual(displayed);
+    const decoded = iface.decodeFunctionData('buyTicket', iface.encodeFunctionData('buyTicket', [mask]));
+    expect(decoded.mask).toBe(mask);
   });
 });

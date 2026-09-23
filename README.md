@@ -24,20 +24,22 @@ npm run dev
 | Transactions | `src/web3/transactions.ts` | Contract price read, `estimateGas`, explicit review, send/wait, friendly errors |
 | UI | `src/components`, `src/App.tsx` | Accessible responsive rendering; presentation is separate from Web3 actions |
 
-## Verified source audit
+## Production V2 contract registry
 
-The original repository contains only `README.md` and `index.html`. V2 imported the following records from `index.html` at commit `c0f8e4cebccf97bf84f6cc73308d8fceda70471d` (lines 527–605). “Enabled” means traceable to that authoritative source record; it does not claim independently explorer-verified bytecode.
+The following V2 deployments are the active frontend registry. The app uses the reviewed production-candidate ABI: `buyTicket(uint32)`, `currentRoundId()`, `rounds(roundId)`, `jackpotReserve()`, and V2 ticket/settlement events. A ticket is a `uint32` mask where numbers 1–25 map to bits 1–25; bit 0 is never a lottery number.
 
 | Network | ID | Lottery | USDT | Status |
 |---|---:|---|---|---|
-| Polygon | 137 | `0x171cc5E40fDeF437DF062D36d082E92eE41b132C` | `0xc2132D05D31c914a87C6611C10748AEb04B58e8F` | Enabled |
-| BNB Chain | 56 | `0xC190A715ab6D4B63fF59501460e9f27D16FfAC33` | `0x55d398326f99059fF775485246999027B3197955` | Enabled |
-| Arbitrum One | 42161 | `0x162F0B0E205719a25542142b65967D5e686068ee` | `0xfd086bc7cd5c481dcc9c85ebe478a1c0b69fcbb9` | Enabled |
-| Base | 8453 | `0x0fBF3A5fFE730D95611f08B6Bb315c6161c36eeB` | `0xfde4C96c8593536E31F229EA8f37b2ADa2699bb2` | Enabled |
-| Optimism | 10 | `0x73B543CC94a03cb7e9DE38eb4EcAAA883b4804b0` | `0x94b008aA00579c1307B0EF2c499aD98a8ce58e58` | Enabled |
-| Avalanche | 43114 | `0x0fBF3A5fFE730D95611f08B6Bb315c6161c36eeB` | `0x9702230A8Ea53601f5cD2dc00fDBc13d4dF4A8c7` | Enabled after on-chain verification |
+| Polygon | 137 | `0x24e203eB34A5B095aB892cA1CBfD8B01F8D1Ec1e` | `0xc2132D05D31c914a87C6611C10748AEb04B58e8F` | Production V2 configured |
+| BNB Chain | 56 | `0x06778A545085f703bfaD5BfeCc619E7bc4F0Dd2D` | `0x55d398326f99059fF775485246999027B3197955` | Production V2 configured |
+| Arbitrum One | 42161 | `0x91AaCA953ff5C12c69629bD2813b2e931f03e63C` | `0xfd086bc7cd5c481dcc9c85ebe478a1c0b69fcbb9` | Production V2 configured |
+| Base | 8453 | `0xBACd528df4c99ED77A8F143ca15cdB2795ac0D58` | `0xfde4C96c8593536E31F229EA8f37b2ADa2699bb2` | Production V2 configured |
+| Optimism | 10 | `0xc6dA7Edc75995595dD82a941C0D7b559F8f5Aa98` | `0x94b008aA00579c1307B0EF2c499aD98a8ce58e58` | Production V2 configured |
+| Avalanche | 43114 | `0x91AaCA953ff5C12c69629bD2813b2e931f03e63C` | `0x9702230A8Ea53601f5cD2dc00fDBc13d4dF4A8c7` | Production V2 configured |
 
-Avalanche and Base reuse the same configured address but were independently verified on-chain; their runtime bytecode hashes differ while the tested lottery read behavior is compatible. See [`docs/onchain-verification.md`](docs/onchain-verification.md). The original ABI specifies `comprarBilhete(uint8[])`, dynamic `precoBilhete`, jackpot/pool/prize reads, and `SorteioRealizado(requestId, maskSorteada)` / `BilheteComprado(jogador, quantidadeApostas)`, plus ERC-20 approval/allowance/balance functions. It mentions Chainlink VRF but includes no coordinator, subscription, key-hash, or callback configuration; V2 does not invent those values.
+Arbitrum One and Avalanche intentionally share the same deployed address, but are distinct deployments because chain ID is part of contract identity. Ticket price and the active cutoff are always read from the current on-chain V2 round. The BNB deployment uses 18-decimal USDT; the other listed deployments use 6 decimals.
+
+Historical deployment blocks and per-chain VRF evidence for these new V2 addresses are not guessed. Draw and winner history remain explicitly pending until those start blocks are independently audited; the UI does not query legacy getters or scan from block zero.
 
 The read-only dashboard’s exact supported data, bounded-history limits, and intentionally unavailable metrics are documented in [`docs/live-data-capabilities.md`](docs/live-data-capabilities.md).
 
@@ -64,7 +66,7 @@ Add a typed `ChainConfig` record to `CHAINS` with its exact chain ID, explorer, 
 ## Security notes
 
 - Seed phrases and private keys are never requested, stored, or transmitted.
-- Ticket value comes from `ticketPrice()` and gas comes from signer estimation for the exact populated transaction.
+- Ticket value comes from `rounds(currentRoundId).ticketPrice` and gas comes from signer estimation for the exact populated transaction.
 - Users review network, contract, payment, and estimated gas before their wallet is invoked.
 - Event records must be associated through indexed `roundId` and VRF `requestId`; array position is not a source of truth.
 - Final wallet confirmation is authoritative. The UI never simulates success.
