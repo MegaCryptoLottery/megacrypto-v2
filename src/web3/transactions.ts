@@ -6,9 +6,9 @@ import type { WalletController } from './wallet';
 type WalletProvider = NonNullable<ReturnType<WalletController['getProvider']>>;
 
 export interface TransactionReview {
-  kind: 'approval' | 'ticket'; network: string; chainId: number; wallet: string; contract: string; lottery: string;
+  kind: 'approval' | 'ticket' | 'claim'; network: string; chainId: number; wallet: string; contract: string; lottery: string;
   token: string; tokenAddress: string; decimals: number; amount: bigint; balance: bigint; numbers: number[];
-  allowance: bigint; gas: bigint; gasLimit: bigint; explorer: string; request: TransactionRequest;
+  allowance: bigint; gas: bigint; gasLimit: bigint; explorer: string; request: TransactionRequest; roundId?: bigint; ticketOffset?: number;
 }
 
 export class InsufficientUsdtBalanceError extends Error {
@@ -65,11 +65,36 @@ export async function prepareTicketPurchase(chain: ChainConfig, provider: Wallet
   return { kind, network: chain.name, chainId: chain.chainId, wallet, contract: kind === 'approval' ? chain.contracts.token : chain.contracts.lottery, lottery: chain.contracts.lottery, token: chain.contracts.tokenSymbol, tokenAddress: chain.contracts.token, decimals: chain.contracts.tokenDecimals, amount, balance, numbers: normalizedNumbers, allowance, gas, gasLimit, explorer: chain.explorer, request: { ...request, gasLimit } };
 }
 
+/** Reads and prepares a single claim only. It never signs or broadcasts. */
+export async function prepareClaim(chain: ChainConfig, provider: WalletProvider | undefined, roundId: bigint, ticketOffset: number): Promise<TransactionReview> {
+  if (!provider || !chain.contracts.lottery || !chain.contracts.token || chain.contracts.status !== 'verified') throw new Error('This lottery deployment is unavailable until it is verified.');
+  const connectedNetwork = await provider.getNetwork();
+  assertPreparationNetwork(Number(connectedNetwork.chainId), chain);
+  const signer = await provider.getSigner();
+  const wallet = await signer.getAddress();
+  const lottery = new Contract(chain.contracts.lottery, LOTTERY_ABI, signer);
+  const token = new Contract(chain.contracts.token, ERC20_ABI, signer);
+  const [entitlement, balance] = await Promise.all([lottery.ticketEntitlement(roundId, ticketOffset), token.balanceOf(wallet) as Promise<bigint>]);
+  const player = entitlement.player as string;
+  const amount = entitlement.amount as bigint;
+  if (player.toLowerCase() !== wallet.toLowerCase() || !(entitlement.winner as boolean) || (entitlement.claimed as boolean) || amount === 0n) throw new Error('This prize is no longer claimable by the connected wallet. Refresh live data and try again.');
+  const request = await lottery.claim.populateTransaction(roundId, ticketOffset);
+  const gas = await signer.estimateGas(request);
+  const gasLimit = gas + gas / 5n;
+  return { kind: 'claim', network: chain.name, chainId: chain.chainId, wallet, contract: chain.contracts.lottery, lottery: chain.contracts.lottery, token: chain.contracts.tokenSymbol, tokenAddress: chain.contracts.token, decimals: chain.contracts.tokenDecimals, amount, balance, numbers: [], allowance: 0n, gas, gasLimit, explorer: chain.explorer, request: { ...request, gasLimit }, roundId, ticketOffset };
+}
+
 /** The only broadcast boundary, used only after the explicit review confirmation. */
 export async function submitReviewed(provider: WalletProvider, review: TransactionReview) {
   const [network, signer] = await Promise.all([provider.getNetwork(), provider.getSigner()]);
   if (Number(network.chainId) !== review.chainId) throw new Error(`Wallet network changed. Switch to ${review.network} and review again.`);
   if ((await signer.getAddress()).toLowerCase() !== review.wallet.toLowerCase()) throw new Error('Wallet account changed. Review the transaction again.');
+  if (review.kind === 'claim') {
+    if (review.request.to?.toString().toLowerCase() !== review.lottery.toLowerCase() || review.roundId === undefined || review.ticketOffset === undefined) throw new Error('Claim review is incomplete. Refresh and review the prize again.');
+    const lottery = new Contract(review.lottery, LOTTERY_ABI, signer);
+    const [entitlement, claimed] = await Promise.all([lottery.ticketEntitlement(review.roundId, review.ticketOffset), lottery.ticketClaimed(review.roundId, review.ticketOffset) as Promise<boolean>]);
+    if ((entitlement.player as string).toLowerCase() !== review.wallet.toLowerCase() || !(entitlement.winner as boolean) || (entitlement.amount as bigint) !== review.amount || (entitlement.claimed as boolean) || claimed) throw new Error('Claim state changed. No transaction was sent; refresh and review the prize again.');
+  }
   const tx = await signer.sendTransaction(review.request);
   return tx.wait();
 }

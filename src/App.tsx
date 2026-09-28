@@ -16,10 +16,11 @@ import { WinnerHistory } from './components/WinnerHistory';
 import { DrawHistory } from './components/DrawHistory';
 import type { ChainKey, LotterySnapshot, WalletState } from './types';
 import { displayToken, readLottery } from './web3/lottery';
-import { friendlyError, prepareTicketPurchase, submitReviewed, type TransactionReview as Review } from './web3/transactions';
+import { friendlyError, prepareClaim, prepareTicketPurchase, submitReviewed, type TransactionReview as Review } from './web3/transactions';
 import { appKitNetworkByChainId, ensureAppKitModal } from './web3/appkit';
 import { WalletController } from './web3/wallet';
-import { readSelectedNetworkState, type SelectedNetworkState } from './web3/player';
+import { readSelectedNetworkState, type ClaimableTicket, type SelectedNetworkState } from './web3/player';
+import { RequestGeneration } from './web3/requestGeneration';
 
 const navigationItems = [
   ['#play', 'Play'], ['#fairness', 'How It Works'], ['#draws', 'Draws'], ['#winners', 'Winners'], ['#tickets', 'My Tickets'], ['#stats', 'Stats'], ['#faq', 'FAQ'],
@@ -36,8 +37,10 @@ export default function App() {
   const [playerState, setPlayerState] = useState<SelectedNetworkState>();
   const [liveRefresh, setLiveRefresh] = useState(0);
   const [lastUpdated, setLastUpdated] = useState<Date>();
+  const [lastTransaction, setLastTransaction] = useState<{ hash: string; explorer: string }>();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const firstMobileLink = useRef<HTMLAnchorElement>(null);
+  const liveReadGeneration = useRef(new RequestGeneration());
   const controller = useMemo(() => new WalletController(setWallet), []);
   const { address, isConnected, status: connectionStatus } = useAppKitAccount();
   const { open: openAppKit } = useAppKit();
@@ -64,16 +67,22 @@ export default function App() {
     return () => { document.body.style.overflow = previousOverflow; document.removeEventListener('keydown', onKeyDown); };
   }, [mobileMenuOpen]);
   useEffect(() => {
+    const generation = liveReadGeneration.current.begin();
     setSnapshot({});
     setPlayerState(undefined);
     Promise.all([readLottery(chain), readSelectedNetworkState(chain, wallet.address)])
       .then(([next, nextPlayerState]) => {
+        if (!liveReadGeneration.current.isCurrent(generation)) return;
         setSnapshot(next);
         setPlayerState(nextPlayerState);
         setLastUpdated(new Date());
         setStatus('Live contract data');
       })
-      .catch((error) => setStatus(error.message));
+      .catch((error) => {
+        if (!liveReadGeneration.current.isCurrent(generation)) return;
+        setStatus(error.message);
+      });
+    return () => { liveReadGeneration.current.invalidate(); };
   }, [chain, liveRefresh, wallet.address]);
 
   const connect = async () => {
@@ -104,6 +113,20 @@ export default function App() {
     } catch (error) { setStatus(friendlyError(error)); }
   };
 
+  const reviewClaim = async (ticket: ClaimableTicket) => {
+    try {
+      if (!wallet.connected) return void setStatus('Connect the ticket wallet before reviewing a claim.');
+      if (wallet.chainId !== chain.chainId) {
+        const targetNetwork = appKitNetworkByChainId.get(chain.chainId);
+        if (!targetNetwork) return void setStatus(`${chain.name} is unavailable for wallet switching.`);
+        setStatus(`Switch your wallet to ${chain.name} before reviewing this claim.`);
+        await switchNetwork(targetNetwork);
+        return;
+      }
+      setReview(await prepareClaim(chain, controller.getProvider(), ticket.roundId, ticket.offset));
+    } catch (error) { setStatus(friendlyError(error)); }
+  };
+
   const confirm = async () => {
     if (!review || !controller.getProvider()) return;
     try {
@@ -111,8 +134,9 @@ export default function App() {
       const receipt = await submitReviewed(controller.getProvider()!, review);
       setStatus(review.kind === 'approval'
         ? `USDT approval confirmed in block ${receipt?.blockNumber ?? 'pending'}. Review the ticket transaction next.`
-        : `Ticket confirmed in block ${receipt?.blockNumber ?? 'pending'}.`);
+        : review.kind === 'claim' ? `Prize claim confirmed in block ${receipt?.blockNumber ?? 'pending'}.` : `Ticket confirmed in block ${receipt?.blockNumber ?? 'pending'}.`);
       setReview(undefined);
+      if (receipt?.hash) setLastTransaction({ hash: receipt.hash, explorer: review.explorer });
       if (review.kind === 'ticket') setNumbers([]);
       setLiveRefresh((version) => version + 1);
     } catch (error) { setStatus(friendlyError(error)); }
@@ -120,6 +144,7 @@ export default function App() {
   };
 
   const activeChain = chainById(wallet.chainId);
+  const ticketsAvailable = snapshot.roundState === 0 && !snapshot.upkeepAction;
   return (
     <div className="app-shell">
       <header className="section-shell app-header">
@@ -150,18 +175,18 @@ export default function App() {
       <div id="stats"><GlobalStats selectedState={playerState} /></div>
 
       <div className="live-status-row"><p id="top" className="status" role="status">
-        {status}{lastUpdated ? ` · Last updated: ${lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}` : ''}{wallet.connected && activeChain && activeChain.key !== selected ? ` · Wallet is on ${activeChain.name}` : ''}
+        {status}{lastUpdated ? ` · Last updated: ${lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}` : ''}{wallet.connected && activeChain && activeChain.key !== selected ? ` · Wallet is on ${activeChain.name}` : ''}{lastTransaction ? <> · <a href={`${lastTransaction.explorer}/tx/${lastTransaction.hash}`} target="_blank" rel="noreferrer">View confirmed transaction ↗</a></> : ''}
       </p><button className="refresh-live-data" type="button" onClick={() => setLiveRefresh((version) => version + 1)}>Refresh live data</button></div>
       <section id="play" className="game-section" aria-label="Play MegaCrypto Lottery">
         <div className="play-layout">
           <NetworkInfoPanel chain={chain} ticketPrice={displayToken(snapshot.ticketPrice, chain.contracts.tokenDecimals)} />
           <div className="play-picker"><NumberPicker value={numbers} onChange={setNumbers} /></div>
-          <DrawPrizePanel network={chain.name} chainId={chain.chainId} jackpot={displayToken(snapshot.jackpot, chain.contracts.tokenDecimals)} weeklyPool={displayToken(snapshot.weeklyPool, chain.contracts.tokenDecimals)} ticketPrice={displayToken(snapshot.ticketPrice, chain.contracts.tokenDecimals)} numbers={numbers} closesAt={snapshot.closesAt} />
+          <DrawPrizePanel network={chain.name} chainId={chain.chainId} jackpot={displayToken(snapshot.jackpot, chain.contracts.tokenDecimals)} weeklyPool={displayToken(snapshot.weeklyPool, chain.contracts.tokenDecimals)} ticketPrice={displayToken(snapshot.ticketPrice, chain.contracts.tokenDecimals)} numbers={numbers} closesAt={snapshot.closesAt} roundState={snapshot.roundState} upkeepAction={snapshot.upkeepAction} />
         </div>
-        <button className="review-ticket" disabled={numbers.length !== 15} onClick={reviewTicket}>Continue to transaction review <span>→</span></button>
+        <button className="review-ticket" disabled={numbers.length !== 15 || !ticketsAvailable} onClick={reviewTicket}>{ticketsAvailable ? 'Continue to transaction review' : 'Ticket sales unavailable for this round'} <span>→</span></button>
       </section>
       <NetworkGrid selected={selected} onSelect={setSelected} />
-      <PlayerDashboard chain={chain} state={playerState} wallet={wallet.address} />
+      <PlayerDashboard chain={chain} state={playerState} wallet={wallet.address} onReviewClaim={reviewClaim} />
       <WinnerHistory refreshKey={liveRefresh} />
       <DrawHistory refreshKey={liveRefresh} />
       <div id="fairness"><Fairness /></div>

@@ -49,4 +49,12 @@ describe('ticket preparation guards', () => {
     const decoded = iface.decodeFunctionData('buyTicket', iface.encodeFunctionData('buyTicket', [mask]));
     expect(decoded.mask).toBe(mask);
   });
+
+  it('uses the deployed two-argument claim ABI for the verified Arbitrum winner', () => {
+    const iface = new Interface(LOTTERY_ABI);
+    const calldata = iface.encodeFunctionData('claim', [1n, 0n]);
+    const decoded = iface.decodeFunctionData('claim', calldata);
+    expect(decoded.id).toBe(1n);
+    expect(decoded.offset).toBe(0n);
+  });
 });

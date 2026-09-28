@@ -37,13 +37,28 @@ describe('on-chain ticket reconstruction bounds', () => {
     expect(maskToNumbers((1n << 1n) | (1n << 3n) | (1n << 25n))).toEqual([1, 3, 25]);
   });
 
+  it('decodes the verified Arbitrum Round 1 winner and ticket with nine matching numbers', () => {
+    const winning = maskToNumbers(62_699_736n);
+    const ticket = maskToNumbers(65_139_540n);
+    const matches = ticket.filter((number) => winning.includes(number));
+    expect(winning).toEqual([3, 4, 6, 7, 11, 12, 13, 15, 18, 19, 20, 21, 23, 24, 25]);
+    expect(ticket).toEqual([2, 4, 6, 8, 9, 12, 13, 14, 15, 16, 21, 22, 23, 24, 25]);
+    expect(matches).toEqual([4, 6, 12, 13, 15, 21, 23, 24, 25]);
+    expect(matches).toHaveLength(9);
+  });
+
   it('pages draw scans in a fixed bounded range rather than from block zero', () => {
     expect(drawPageEnd(100_000, 900_000)).toBe(149_999);
     expect(EVENT_SCAN_CHUNK_SIZE).toBe(2_000);
     expect(EVENT_SCAN_CHUNKS_PER_PAGE).toBe(25);
   });
 
-  it('does not reuse legacy deployment blocks for new V2 contracts', () => {
-    for (const chain of Object.values(CHAINS)) expect(chain.contracts.deploymentStartBlock).toBeUndefined();
+  it('uses only V2 creation receipts as bounded-history start blocks and leaves BNB fail-closed', () => {
+    expect(CHAINS.polygon.contracts.deploymentStartBlock).toBe(94_284_987);
+    expect(CHAINS.arbitrum.contracts.deploymentStartBlock).toBe(507_946_476);
+    expect(CHAINS.base.contracts.deploymentStartBlock).toBe(51_670_757);
+    expect(CHAINS.optimism.contracts.deploymentStartBlock).toBe(157_266_294);
+    expect(CHAINS.avalanche.contracts.deploymentStartBlock).toBe(95_951_653);
+    expect(CHAINS.bsc.contracts.deploymentStartBlock).toBeUndefined();
   });
 });
