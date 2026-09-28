@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useI18n } from '../i18n';
 
 export const normalizeTicketNumbers = (numbers: number[]) => {
   const normalized = [...new Set(numbers)].sort((a, b) => a - b);
@@ -29,6 +30,7 @@ function useSound() {
 }
 
 export function NumberPicker({ value, onChange }: { value: number[]; onChange: (numbers: number[]) => void }) {
+  const { t } = useI18n();
   const { enabled, setEnabled, tone } = useSound();
   const toggle = (number: number) => {
     if (value.includes(number)) { onChange(value.filter((entry) => entry !== number)); tone(280); }
@@ -46,10 +48,10 @@ export function NumberPicker({ value, onChange }: { value: number[]; onChange: (
   return (
     <section className="panel picker" aria-labelledby="ticket-title">
       <div className="section-heading">
-        <div><p className="eyebrow">STEP 1</p><h2 id="ticket-title">Select 15 Numbers</h2><span className="picker-subtitle">Choose 15 numbers from 1 to 25</span></div>
+        <div><p className="eyebrow">{t('step1')}</p><h2 id="ticket-title">{t('select')}</h2><span className="picker-subtitle">{t('choose')}</span></div>
         <div className="picker-tools">
-          <span className={value.length === 15 ? 'ready-count' : 'muted'}>{value.length} / 15 selected</span>
-          <button className="icon-button" aria-label={enabled ? 'Mute sounds' : 'Enable sounds'} onClick={() => setEnabled(!enabled)}>{enabled ? '🔊' : '🔇'}</button>
+          <span className={value.length === 15 ? 'ready-count' : 'muted'}>{value.length} / 15 {t('selected')}</span>
+          <button className="icon-button" aria-label={enabled ? t('muteSounds') : t('enableSounds')} onClick={() => setEnabled(!enabled)}>{enabled ? '🔊' : '🔇'}</button>
         </div>
       </div>
       <div className="number-grid">
@@ -58,9 +60,9 @@ export function NumberPicker({ value, onChange }: { value: number[]; onChange: (
         ))}
       </div>
       <div className="picker-actions">
-        <button className="secondary" onClick={() => { onChange([]); tone(220); }} disabled={!value.length}>Clear Selection</button>
-        <button className="secondary" onClick={lucky}>Lucky pick</button>
-        <span>{value.length === 15 ? 'Your ticket is ready for review.' : 'Choose 15 unique numbers to continue.'}</span>
+        <button className="secondary" onClick={() => { onChange([]); tone(220); }} disabled={!value.length}>{t('clear')}</button>
+        <button className="secondary" onClick={lucky}>{t('lucky')}</button>
+        <span>{value.length === 15 ? t('ticketReady') : t('chooseToContinue')}</span>
       </div>
     </section>
   );

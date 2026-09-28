@@ -3,17 +3,19 @@ import { CHAINS } from '../config/chains';
 import type { ChainKey } from '../types';
 import { formatUsdt, normalizeUsdt } from '../web3/amounts';
 import { readWinnerHistory, type WinnerRecord } from '../web3/player';
+import { useI18n } from '../i18n';
 
 type WinnerResult = { total: number; scanned: number; winners: WinnerRecord[]; error?: string };
 const short = (address: string) => `${address.slice(0, 6)}…${address.slice(-4)}`;
-const dateFromContract = (value: bigint) => {
+const dateFromContract = (value: bigint, format: (value: Date | number, options?: Intl.DateTimeFormatOptions) => string, fallback: string) => {
   const milliseconds = Number(value) * 1000;
   return Number.isSafeInteger(milliseconds) && milliseconds > Date.UTC(2000, 0, 1) && milliseconds <= Date.now() + 86_400_000
-    ? new Date(milliseconds).toLocaleString()
-    : `Contract timestamp: ${value.toString()}`;
+    ? format(new Date(milliseconds))
+    : `${fallback}: ${value.toString()}`;
 };
 
 export function WinnerHistory({ refreshKey }: { refreshKey: number }) {
+  const { t, date } = useI18n();
   const [results, setResults] = useState<Partial<Record<ChainKey, WinnerResult>>>({});
   const [filter, setFilter] = useState<'all' | ChainKey>('all');
   useEffect(() => {
@@ -27,9 +29,9 @@ export function WinnerHistory({ refreshKey }: { refreshKey: number }) {
   const records = useMemo(() => Object.entries(results).flatMap(([key, result]) => result?.winners ?? []).filter((winner) => filter === 'all' || winner.chain.key === filter).sort((a, b) => Number(b.timestamp - a.timestamp)), [filter, results]);
   const normalizedRecorded = useMemo(() => records.reduce((sum, winner) => sum + normalizeUsdt(winner.amount, winner.chain.contracts.tokenDecimals), 0n), [records]);
   const scanned = Object.values(results).reduce((sum, result) => sum + (result?.scanned ?? 0), 0);
-  return <section id="winners" className="winner-history panel" aria-label="Recorded winners">
-    <div className="history-heading"><div><p className="eyebrow">RECORDED WINNERS</p><h2>Latest on-chain prize records</h2><p className="data-limitation">V2 historical winner events will appear after audited deployment start blocks are configured. No legacy getter is queried against these new deployments.</p></div><label>Network<select value={filter} onChange={(event) => setFilter(event.target.value as 'all' | ChainKey)}><option value="all">All networks</option>{Object.values(CHAINS).map((chain) => <option key={chain.key} value={chain.key}>{chain.name}</option>)}</select></label></div>
-    <p className="recorded-prizes"><span>RECORDED PRIZES · BOUNDED HISTORY</span><strong>{formatUsdt(normalizedRecorded, 6, 4)} USDT</strong></p>
-    {records.length ? <div className="winner-records">{records.map((winner) => <article key={`${winner.chain.key}-${winner.index}`}><b>{winner.chain.name}</b><a href={`${winner.chain.explorer}/address/${winner.wallet}`} target="_blank" rel="noreferrer">{short(winner.wallet)} ↗</a><strong>{formatUsdt(winner.amount, winner.chain.contracts.tokenDecimals, 4)} USDT</strong><span>{winner.type || 'Contract prize type'} · {dateFromContract(winner.timestamp)}</span></article>)}</div> : <p className="empty">Winner history awaits audited V2 deployment blocks for bounded event scanning.</p>}
+  return <section id="winners" className="winner-history panel" aria-label={t('recordedWinners')}>
+    <div className="history-heading"><div><p className="eyebrow">{t('recordedWinners')}</p><h2>{t('latestPrizeRecords')}</h2><p className="data-limitation">{t('winnerHistoryLimit')}</p></div><label>{t('network')}<select value={filter} onChange={(event) => setFilter(event.target.value as 'all' | ChainKey)}><option value="all">{t('allNetworks')}</option>{Object.values(CHAINS).map((chain) => <option key={chain.key} value={chain.key}>{chain.name}</option>)}</select></label></div>
+    <p className="recorded-prizes"><span>{t('recordedPrizes')}</span><strong>{formatUsdt(normalizedRecorded, 6, 4)} USDT</strong></p>
+    {records.length ? <div className="winner-records">{records.map((winner) => <article key={`${winner.chain.key}-${winner.index}`}><b>{winner.chain.name}</b><a href={`${winner.chain.explorer}/address/${winner.wallet}`} target="_blank" rel="noreferrer">{short(winner.wallet)} ↗</a><strong>{formatUsdt(winner.amount, winner.chain.contracts.tokenDecimals, 4)} USDT</strong><span>{winner.type || t('contractPrizeType')} · {dateFromContract(winner.timestamp, date, t('contractTimestamp'))}</span></article>)}</div> : <p className="empty">{t('winnerHistoryEmpty')}</p>}
   </section>;
 }

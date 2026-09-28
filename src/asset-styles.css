@@ -83,3 +83,6 @@
 .fairness-grid article strong.verification-pending { color:#f2c45e; }
 .fairness-grid article span, .fairness-grid article small { overflow-wrap:anywhere; }
 @media (max-width: 767px) { .live-status-row, .history-heading { align-items:stretch; flex-direction:column; } .refresh-live-data, .history-heading label { width:100%; } .player-dashboard { grid-template-columns:1fr; } .claimable { min-width:0; } .ticket-history, .winner-records { grid-column:auto; } }
+
+/* CJK-capable system fallback without downloading a large webfont. */
+:lang(ja), :lang(ko), :lang(zh-CN), :lang(zh-TW) { font-family: Inter, "Noto Sans CJK JP", "Hiragino Sans", "Yu Gothic", "Malgun Gothic", "Microsoft YaHei", "PingFang SC", "PingFang TC", system-ui, sans-serif; }

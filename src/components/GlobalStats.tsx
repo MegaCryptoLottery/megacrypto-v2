@@ -1,14 +1,16 @@
 import type { SelectedNetworkState } from '../web3/player';
+import { useI18n } from '../i18n';
 
 export function GlobalStats({ selectedState }: { selectedState?: SelectedNetworkState }) {
+  const { t } = useI18n();
   const bounded = selectedState && selectedState.scannedBets < selectedState.currentBets;
   return (
-    <section className="global-stats" aria-label="Global lottery status">
-      <div><span>Current round players</span><strong>{selectedState ? `${selectedState.currentPlayers}${bounded ? '+' : ''}` : '— Data pending'}</strong></div>
-      <div><span>Current round tickets</span><strong>{selectedState ? selectedState.currentBets : '— Data pending'}</strong></div>
-      <div><span>Winner records</span><strong>See recorded history</strong></div>
-      <div><span>Prize pools</span><strong>Live above</strong></div>
-      <div className="vrf-stat"><span>Chainlink VRF</span><strong>Verification pending</strong></div>
+    <section className="global-stats" aria-label={t('globalStatus')}>
+      <div><span>{t('currentPlayers')}</span><strong>{selectedState ? `${selectedState.currentPlayers}${bounded ? '+' : ''}` : `— ${t('dataPending')}`}</strong></div>
+      <div><span>{t('currentTickets')}</span><strong>{selectedState ? selectedState.currentBets : `— ${t('dataPending')}`}</strong></div>
+      <div><span>{t('winnerRecords')}</span><strong>{t('recordedHistory')}</strong></div>
+      <div><span>{t('prizePools')}</span><strong>{t('liveAbove')}</strong></div>
+      <div className="vrf-stat"><span>Chainlink VRF</span><strong>{t('verificationPending')}</strong></div>
     </section>
   );
 }
