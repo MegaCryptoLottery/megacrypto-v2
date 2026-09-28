@@ -6,6 +6,7 @@ import { maskToNumbers } from './player';
 
 export const EVENT_SCAN_CHUNK_SIZE = 2_000;
 export const EVENT_SCAN_CHUNKS_PER_PAGE = 25;
+export const RECENT_DRAW_SCAN_BLOCKS = EVENT_SCAN_CHUNK_SIZE * EVENT_SCAN_CHUNKS_PER_PAGE;
 export type DrawEvent = { chain: ChainConfig; roundId: bigint; requestId: bigint; mask: bigint; numbers: number[]; blockNumber: number; transactionHash: string; timestamp: number };
 export type DrawPage = { draws: DrawEvent[]; fromBlock?: number; toBlock?: number; nextBlock?: number; complete: boolean; error?: string };
 export const drawPageEnd = (fromBlock: number, latest: number) => Math.min(latest, fromBlock + EVENT_SCAN_CHUNK_SIZE * EVENT_SCAN_CHUNKS_PER_PAGE - 1);
@@ -32,5 +33,14 @@ export async function readDrawPage(chain: ChainConfig, fromBlock = chain.contrac
       }));
       return { draws, fromBlock, toBlock, nextBlock: toBlock < latest ? toBlock + 1 : undefined, complete: toBlock >= latest };
     });
+  } catch (error) { return { draws: [], complete: false, error: error instanceof Error ? error.message : 'RPC event query failed.' }; }
+}
+
+/** A small latest-block window keeps newly settled rounds visible without replaying history. */
+export async function readRecentDrawPage(chain: ChainConfig): Promise<DrawPage> {
+  if (!chain.contracts.deploymentStartBlock) return { draws: [], complete: false, error: 'Deployment start block unavailable.' };
+  try {
+    const latest = await new RpcManager(chain).request((provider) => provider.getBlockNumber());
+    return readDrawPage(chain, Math.max(chain.contracts.deploymentStartBlock, latest - RECENT_DRAW_SCAN_BLOCKS + 1));
   } catch (error) { return { draws: [], complete: false, error: error instanceof Error ? error.message : 'RPC event query failed.' }; }
 }

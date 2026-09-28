@@ -7,7 +7,9 @@ export class RpcManager {
     const urls = this.chain.rpcUrls;
     if (!urls.length) throw new Error(`No RPC endpoint is configured for ${this.chain.name}.`);
     let last: unknown;
-    for (const url of urls) for (let attempt = 0; attempt < 2; attempt++) try { return await timeout(run(new JsonRpcProvider(url, this.chain.chainId))); } catch (error) { last = error; }
+    // Some public L2 endpoints reject ethers' batched JSON-RPC payloads. Keep
+    // reads independent so a single rejected batch falls back cleanly.
+    for (const url of urls) for (let attempt = 0; attempt < 2; attempt++) try { return await timeout(run(new JsonRpcProvider(url, this.chain.chainId, { batchMaxCount: 1 }))); } catch (error) { last = error; }
     throw last instanceof Error ? last : new Error('All RPC providers failed.');
   }
 }

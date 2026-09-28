@@ -1,15 +1,22 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { readGlobalPrizes, type NetworkPrizeState } from '../web3/dashboard';
 import { formatNormalizedUsdt } from '../web3/amounts';
 import { TrophyMark } from './TrophyMark';
 import { NetworkIcon } from './NetworkIcon';
+import { RequestGeneration } from '../web3/requestGeneration';
 
 const display = (value?: bigint) => formatNormalizedUsdt(value, 2, 2);
 
 export function GlobalPrizeDashboard({ refreshKey = 0 }: { refreshKey?: number }) {
   const [data, setData] = useState<{ jackpot: bigint; weekly: bigint; available: number; networks: NetworkPrizeState[] }>();
   const [loading, setLoading] = useState(true);
-  const refresh = async () => { setLoading(true); setData(await readGlobalPrizes()); setLoading(false); };
+  const generation = useRef(new RequestGeneration());
+  const refresh = async () => {
+    const current = generation.current.begin(); setLoading(true);
+    const next = await readGlobalPrizes();
+    if (!generation.current.isCurrent(current)) return;
+    setData(next); setLoading(false);
+  };
   useEffect(() => { void refresh(); }, [refreshKey]);
 
   return (

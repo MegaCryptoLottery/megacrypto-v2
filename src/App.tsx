@@ -1,6 +1,6 @@
 import { useAppKit, useAppKitAccount, useAppKitNetwork, useAppKitProvider } from '@reown/appkit/react';
 import { type Eip1193Provider } from 'ethers';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { CHAINS, chainById } from './config/chains';
 import { Fairness } from './components/Fairness';
 import { DrawPrizePanel } from './components/DrawPrizePanel';
@@ -21,6 +21,7 @@ import { appKitNetworkByChainId, ensureAppKitModal } from './web3/appkit';
 import { WalletController } from './web3/wallet';
 import { readSelectedNetworkState, type ClaimableTicket, type SelectedNetworkState } from './web3/player';
 import { RequestGeneration } from './web3/requestGeneration';
+import { useLiveRefresh } from './hooks/useLiveRefresh';
 
 const navigationItems = [
   ['#play', 'Play'], ['#fairness', 'How It Works'], ['#draws', 'Draws'], ['#winners', 'Winners'], ['#tickets', 'My Tickets'], ['#stats', 'Stats'], ['#faq', 'FAQ'],
@@ -35,12 +36,15 @@ export default function App() {
   const [review, setReview] = useState<Review>();
   const [busy, setBusy] = useState(false);
   const [playerState, setPlayerState] = useState<SelectedNetworkState>();
-  const [liveRefresh, setLiveRefresh] = useState(0);
   const [lastUpdated, setLastUpdated] = useState<Date>();
   const [lastTransaction, setLastTransaction] = useState<{ hash: string; explorer: string }>();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const firstMobileLink = useRef<HTMLAnchorElement>(null);
   const liveReadGeneration = useRef(new RequestGeneration());
+  const hasLiveRead = useRef(false);
+  const liveChainKey = useRef<ChainKey>();
+  const { fastVersion, historyVersion, refreshNow } = useLiveRefresh();
+  const onCutoffElapsed = useCallback(() => refreshNow(false), [refreshNow]);
   const controller = useMemo(() => new WalletController(setWallet), []);
   const { address, isConnected, status: connectionStatus } = useAppKitAccount();
   const { open: openAppKit } = useAppKit();
@@ -67,23 +71,31 @@ export default function App() {
     return () => { document.body.style.overflow = previousOverflow; document.removeEventListener('keydown', onKeyDown); };
   }, [mobileMenuOpen]);
   useEffect(() => {
+    const selectedChainChanged = liveChainKey.current !== chain.key;
+    liveChainKey.current = chain.key;
+    if (selectedChainChanged) {
+      // Never present a prior network's round or player state while the new
+      // network is being read. Periodic refreshes retain the last good state.
+      setSnapshot({});
+      setPlayerState(undefined);
+      hasLiveRead.current = false;
+    }
     const generation = liveReadGeneration.current.begin();
-    setSnapshot({});
-    setPlayerState(undefined);
     Promise.all([readLottery(chain), readSelectedNetworkState(chain, wallet.address)])
       .then(([next, nextPlayerState]) => {
         if (!liveReadGeneration.current.isCurrent(generation)) return;
         setSnapshot(next);
         setPlayerState(nextPlayerState);
         setLastUpdated(new Date());
+        hasLiveRead.current = true;
         setStatus('Live contract data');
       })
       .catch((error) => {
         if (!liveReadGeneration.current.isCurrent(generation)) return;
-        setStatus(error.message);
+        setStatus(`${hasLiveRead.current ? 'Live data stale — ' : ''}${error.message}`);
       });
     return () => { liveReadGeneration.current.invalidate(); };
-  }, [chain, liveRefresh, wallet.address]);
+  }, [chain, fastVersion, wallet.address]);
 
   const connect = async () => {
     try {
@@ -138,7 +150,7 @@ export default function App() {
       setReview(undefined);
       if (receipt?.hash) setLastTransaction({ hash: receipt.hash, explorer: review.explorer });
       if (review.kind === 'ticket') setNumbers([]);
-      setLiveRefresh((version) => version + 1);
+      refreshNow(true);
     } catch (error) { setStatus(friendlyError(error)); }
     finally { setBusy(false); }
   };
@@ -171,24 +183,24 @@ export default function App() {
       </div>}
 
       <div role="main" className="content-container">
-      <GlobalPrizeDashboard refreshKey={liveRefresh} />
+      <GlobalPrizeDashboard refreshKey={fastVersion} />
       <div id="stats"><GlobalStats selectedState={playerState} /></div>
 
       <div className="live-status-row"><p id="top" className="status" role="status">
         {status}{lastUpdated ? ` · Last updated: ${lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}` : ''}{wallet.connected && activeChain && activeChain.key !== selected ? ` · Wallet is on ${activeChain.name}` : ''}{lastTransaction ? <> · <a href={`${lastTransaction.explorer}/tx/${lastTransaction.hash}`} target="_blank" rel="noreferrer">View confirmed transaction ↗</a></> : ''}
-      </p><button className="refresh-live-data" type="button" onClick={() => setLiveRefresh((version) => version + 1)}>Refresh live data</button></div>
+      </p><button className="refresh-live-data" type="button" onClick={() => refreshNow(true)}>Refresh live data</button></div>
       <section id="play" className="game-section" aria-label="Play MegaCrypto Lottery">
         <div className="play-layout">
           <NetworkInfoPanel chain={chain} ticketPrice={displayToken(snapshot.ticketPrice, chain.contracts.tokenDecimals)} />
           <div className="play-picker"><NumberPicker value={numbers} onChange={setNumbers} /></div>
-          <DrawPrizePanel network={chain.name} chainId={chain.chainId} jackpot={displayToken(snapshot.jackpot, chain.contracts.tokenDecimals)} weeklyPool={displayToken(snapshot.weeklyPool, chain.contracts.tokenDecimals)} ticketPrice={displayToken(snapshot.ticketPrice, chain.contracts.tokenDecimals)} numbers={numbers} closesAt={snapshot.closesAt} roundState={snapshot.roundState} upkeepAction={snapshot.upkeepAction} />
+          <DrawPrizePanel network={chain.name} chainId={chain.chainId} jackpot={displayToken(snapshot.jackpot, chain.contracts.tokenDecimals)} weeklyPool={displayToken(snapshot.weeklyPool, chain.contracts.tokenDecimals)} ticketPrice={displayToken(snapshot.ticketPrice, chain.contracts.tokenDecimals)} numbers={numbers} closesAt={snapshot.closesAt} roundState={snapshot.roundState} upkeepAction={snapshot.upkeepAction} onCutoffElapsed={onCutoffElapsed} />
         </div>
         <button className="review-ticket" disabled={numbers.length !== 15 || !ticketsAvailable} onClick={reviewTicket}>{ticketsAvailable ? 'Continue to transaction review' : 'Ticket sales unavailable for this round'} <span>→</span></button>
       </section>
       <NetworkGrid selected={selected} onSelect={setSelected} />
       <PlayerDashboard chain={chain} state={playerState} wallet={wallet.address} onReviewClaim={reviewClaim} />
-      <WinnerHistory refreshKey={liveRefresh} />
-      <DrawHistory refreshKey={liveRefresh} />
+      <WinnerHistory refreshKey={historyVersion} />
+      <DrawHistory refreshKey={historyVersion} />
       <div id="fairness"><Fairness /></div>
       <TrustBar />
       </div>
